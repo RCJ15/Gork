@@ -1,0 +1,111 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-7000549718008664892
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3eb9ffdb0c6e0554481aa58311099b19, type: 3}
+  m_Name: ConstantFloatNode
+  m_EditorClassIdentifier: 
+  GUID: a18f69ecc967cc3418071c64b9efc293
+  Position: {x: 163.0378, y: 111.32805}
+  _graph: {fileID: 0}
+  AllConnections: []
+  Value: 69
+--- !u!114 &-4488100921099636875
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 34aeb47da43d04d449eba5ed32684b03, type: 3}
+  m_Name: MultiChoiceDialogueNode
+  m_EditorClassIdentifier: 
+  GUID: 9d859efb5e65b2741881423044676e32
+  Position: {x: 657.4033, y: 360.8}
+  _graph: {fileID: 0}
+  AllConnections: []
+  Choices:
+  - Choice 1
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aa088eb34004b61429f84d7a965df54b, type: 3}
+  m_Name: Gork Graph
+  m_EditorClassIdentifier: 
+  Nodes:
+  - {fileID: 5438493442327545639}
+  - {fileID: 5660667877800832305}
+  - {fileID: -4488100921099636875}
+  - {fileID: -7000549718008664892}
+  GorkGroups: []
+--- !u!114 &5293380457186935856
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e3975ee6781a6d84ca2d137d185228bf, type: 3}
+  m_Name: DialogueNode
+  m_EditorClassIdentifier: 
+  GUID: 7cc5f333164f8bd46b2e446e697efd4a
+  Position: {x: 0, y: 0}
+  _graph: {fileID: 0}
+  AllConnections: []
+  Text: Insert dialogue text here...
+--- !u!114 &5438493442327545639
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e01849f5a02c21c4487be1db1c96dfcb, type: 3}
+  m_Name: ConstantBoolNode
+  m_EditorClassIdentifier: 
+  GUID: c7775a2e2c3e29d4c95b2cf9fcb0d3b6
+  Position: {x: 284.40796, y: 260}
+  _graph: {fileID: 0}
+  AllConnections:
+  - Connections:
+    - PortIndex: 0
+      Node: {fileID: 5660667877800832305}
+  - Connections:
+    - PortIndex: 0
+      Node: {fileID: -4488100921099636875}
+  Value: 1
+--- !u!114 &5660667877800832305
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 19e4175cb792ada47a45cbde18bfe43e, type: 3}
+  m_Name: BoolInvertNode
+  m_EditorClassIdentifier: 
+  GUID: eb0f9c304f6e82e41b64046422279c01
+  Position: {x: 492.8, y: 260}
+  _graph: {fileID: 0}
+  AllConnections: []

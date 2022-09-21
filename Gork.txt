@@ -1,0 +1,9 @@
+Gork is a Node Based system allowing for cool cutscenes in video games.
+Gork is created using Unitys extremely underdocumented Graph View API and is built inside of UI Builder.
+
+Gork used resources online such as this extremely helpful youtube tutorial: https://www.youtube.com/watch?v=nKpM98I7PeM
+
+Gork also used the following github repositories:
+https://github.com/Unity-Technologies/ShaderGraph
+https://github.com/Unity-Technologies/UnityCsReference/tree/3fcad4bbbea0455588843799c67861f7b9eb3825/Modules/GraphViewEditor
+https://github.com/Wafflus/unity-dialogue-system
