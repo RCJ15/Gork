@@ -34,7 +34,7 @@ namespace Gork.Editor
         public List<GorkPort> OutputPorts = new List<GorkPort>();
 
         private Label _titleLabel;
-
+        
         public GorkNodeView(GorkNode node, GorkGraphView graphView)
         {
             _titleLabel = titleContainer.Q<Label>(name: "title-label");
@@ -114,7 +114,13 @@ namespace Gork.Editor
                 }
             }
 
+            if (GraphView.SubscribedNodes.TryGetValue(Node, out GorkNodeView nodeView))
+            {
+                Node.UpdateNodeViewCallback -= nodeView.UpdateNodeView;
+            }
+
             Node.UpdateNodeViewCallback += UpdateNodeView;
+            GraphView.SubscribedNodes[Node] = this;
 
             Node.Title = _titleLabel.text;
 
@@ -176,6 +182,11 @@ namespace Gork.Editor
                         GorkPort port = list[i];
                         list.RemoveAt(i);
 
+                        foreach (Edge edge in port.connections)
+                        {
+                            GraphView.RemoveElement(edge);
+                        }
+
                         container.Remove(port);
                         continue;
                     }
@@ -210,6 +221,11 @@ namespace Gork.Editor
                             {
                                 GorkNodeView otherNodeView = GraphView.GetNodeView(connection.Node);
 
+                                if (otherNodeView == null)
+                                {
+                                    continue;
+                                }
+
                                 if (connection.PortIndex >= otherNodeView.InputPorts.Count)
                                 {
                                     continue;
@@ -219,10 +235,11 @@ namespace Gork.Editor
 
                                 GorkEdge edge = port.GorkConnectTo(otherPort);
                                 GraphView.AddElement(edge);
-
-                                Debug.Log(otherNodeView.Node.name);
                             }
+
                         }
+
+                        //--
                     }
                 }
             }
@@ -264,12 +281,12 @@ namespace Gork.Editor
 
         public void DisconnectInputPorts()
         {
-            GraphView.DeleteElements(GetConnections(outputContainer));
+            GraphView.DeleteElements(GetConnections(inputContainer));
         }
 
         public void DisconnectOutputPorts()
         {
-            GraphView.DeleteElements(GetConnections(inputContainer));
+            GraphView.DeleteElements(GetConnections(outputContainer));
         }
 
         public void Delete()
@@ -310,7 +327,7 @@ namespace Gork.Editor
 
         private List<Edge> GetConnections(VisualElement container)
         {
-            List<Edge> toDeleteList = new List<Edge>();
+            List<Edge> list = new List<Edge>();
 
             container.Query<Port>().ForEach(elem =>
             {
@@ -323,12 +340,12 @@ namespace Gork.Editor
                             continue;
                         }
 
-                        toDeleteList.Add(c);
+                        list.Add(c);
                     }
                 }
             });
 
-            return toDeleteList;
+            return list;
         }
 
         /// <summary>
@@ -358,18 +375,15 @@ namespace Gork.Editor
         /// <summary>
         /// Adds an input <see cref="GorkPort"/> to this node and then returns it.
         /// </summary>
-        public GorkPort AddInputPort(string name, Type type, bool displayType = true, bool addToList = true)
+        public GorkPort AddInputPort(string name, Type type, bool displayType = true)
         {
             // Create port
             GorkPort port = GorkPort.CreateInputPort(type, this);
 
             SetPortName(port, name, type, displayType);
 
-            if (addToList)
-            {
-                // Add to list
-                InputPorts.Add(port);
-            }
+            // Add to list
+            InputPorts.Add(port);
 
             // Add to container
             inputContainer.Add(port);
@@ -381,18 +395,15 @@ namespace Gork.Editor
         /// <summary>
         /// Adds an output <see cref="GorkPort"/> to this node and then returns it.
         /// </summary>
-        public GorkPort AddOutputPort(string name, Type type, bool displayType = true, bool addToList = true)
+        public GorkPort AddOutputPort(string name, Type type, bool displayType = true)
         {
             // Create port
             GorkPort port = GorkPort.CreateOutputPort(type, this);
 
             SetPortName(port, name, type, displayType);
 
-            if (addToList)
-            {
-                // Add to list
-                OutputPorts.Add(port);
-            }
+            // Add to list
+            OutputPorts.Add(port);
 
             // Add to container
             outputContainer.Add(port);

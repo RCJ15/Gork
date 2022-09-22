@@ -26,7 +26,15 @@ namespace Gork
                 Undo.RecordObject(this, $"Modified Property in {name}");
                 Value = data.newValue;
 
-                SetOutputPort(1, $"Test: {Value}");
+                if (Value)
+                {
+                    SetOutputPort(1, $"Test");
+                }
+                else
+                {
+                    DeleteOutputPort(1);
+                }
+
                 UpdateNodeView();
             });
 

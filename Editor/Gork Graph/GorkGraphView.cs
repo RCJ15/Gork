@@ -23,6 +23,8 @@ namespace Gork.Editor
         private GorkNodeSearchWindow _searchWindow;
         private Vector3 _cachedMousePos;
 
+        public Dictionary<GorkNode, GorkNodeView> SubscribedNodes = new Dictionary<GorkNode, GorkNodeView>();
+
         protected override bool canDeleteSelection => false;
 
         public GorkGraphView()

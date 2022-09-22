@@ -20,7 +20,7 @@ namespace Gork.Editor
         {
             // Load object using instance ID
             string path = AssetDatabase.GetAssetPath(instanceID);
-            Object obj = AssetDatabase.LoadAssetAtPath<Object>(path);
+            Object obj = AssetDatabase.LoadMainAssetAtPath(path);
 
             // Get the object type
             Type objType = obj.GetType();

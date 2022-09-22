@@ -123,6 +123,16 @@ namespace Gork
             });
         }
 
+        protected void DeleteInputPort(int index)
+        {
+            if (index < 0 || index > InputPorts.Count - 1)
+            {
+                return;
+            }
+
+            InputPorts.RemoveAt(index);
+        }
+
         protected void SetOutputPort(int index, string name)
         {
             SetOutputPort(index, port =>
@@ -149,11 +159,21 @@ namespace Gork
                 port.DisplayType = displayType;
             });
         }
+
+        protected void DeleteOutputPort(int index)
+        {
+            if (index < 0 || index > OutputPorts.Count - 1)
+            {
+                return;
+            }
+
+            OutputPorts.RemoveAt(index);
+        }
         #endregion
 
         #region UpdateNodeView()
         [DontSaveInGorkGraph] public Action UpdateNodeViewCallback;
-        protected void UpdateNodeView() => UpdateNodeViewCallback?.Invoke();
+        protected virtual void UpdateNodeView() => UpdateNodeViewCallback?.Invoke();
         #endregion
 
         #region IMGUI Drawing
@@ -211,14 +231,17 @@ namespace Gork
         /// </summary>
         protected virtual void Draw(List<VisualElement> elements)
         {
+            elements.Add(CreateInspector());
+        }
+
+        protected IMGUIContainer CreateInspector()
+        {
             if (_editor == null)
             {
                 _editor = Editor.CreateEditor(this);
             }
 
-            IMGUIContainer container = new IMGUIContainer(OnInspectorGUI);
-
-            elements.Add(container);
+            return new IMGUIContainer(OnInspectorGUI);
         }
 
         /// <summary>

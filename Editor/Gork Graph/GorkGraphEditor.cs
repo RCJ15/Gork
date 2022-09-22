@@ -84,7 +84,12 @@ namespace Gork.Editor
 
             if (selectedGraph == null)
             {
-                return;
+                selectedGraph = AssetDatabase.LoadMainAssetAtPath(AssetDatabase.GetAssetPath(Selection.activeObject)) as GorkGraph;
+
+                if (selectedGraph == null)
+                {
+                    return;
+                }
             }
 
             OpenGraph(selectedGraph);
