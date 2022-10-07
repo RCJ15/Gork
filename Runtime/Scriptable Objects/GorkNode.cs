@@ -178,7 +178,20 @@ namespace Gork
 
         #region IMGUI Drawing
         private Editor _editor;
-        protected SerializedObject serializedObject => _editor.serializedObject;
+        protected Editor editor
+        {
+            get
+            {
+                if (_editor == null)
+                {
+                    _editor = Editor.CreateEditor(this);
+                }
+
+                return _editor;
+            }
+        }
+
+        protected SerializedObject serializedObject => editor.serializedObject;
         #endregion
 
         #region GorkGraph
@@ -236,11 +249,6 @@ namespace Gork
 
         protected IMGUIContainer CreateInspector()
         {
-            if (_editor == null)
-            {
-                _editor = Editor.CreateEditor(this);
-            }
-
             return new IMGUIContainer(OnInspectorGUI);
         }
 
@@ -293,6 +301,11 @@ namespace Gork
                 expanded = false;
             }
 
+            if (doneSpace)
+            {
+                EditorGUILayout.Space();
+            }
+
             return serializedObject.ApplyModifiedProperties();
         }
 
@@ -316,7 +329,7 @@ namespace Gork
         public virtual float InspectorFieldWidth => 50;
 
         #region Connections
-        [DontSaveInGorkGraph] /*[HideInInspector]*/ public List<ConnectPort> AllConnections = new List<ConnectPort>();
+        [DontSaveInGorkGraph] [HideInInspector] public List<ConnectPort> AllConnections = new List<ConnectPort>();
 
         public List<Connection> GetConnections(int index)
         {
@@ -334,6 +347,17 @@ namespace Gork
             }
 
             return AllConnections[index].Connections;
+        }
+
+
+        public void RemoveConnections(int index)
+        {
+            if (index >= AllConnections.Count)
+            {
+                return;
+            }
+
+            AllConnections.RemoveAt(index);
         }
 
         /// <summary>

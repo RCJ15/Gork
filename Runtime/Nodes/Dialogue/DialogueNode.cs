@@ -7,12 +7,10 @@ namespace Gork
     /// <summary>
     /// A <see cref="GorkNode"/> that will start some dialogue.
     /// </summary>
-    [GorkNodeInfo("Dialogue/Dialogue", COLOR)]
+    [GorkNodeInfo("Dialogue/Dialogue", GorkColors.DIALOGUE_COLOR)]
     public class DialogueNode : GorkNode
     {
-        public const string COLOR = "422626";
-
-        [TextArea(1, 5)]
+        [TextArea(2, 5)]
         public string Text = "Insert dialogue text here...";
     }
 }

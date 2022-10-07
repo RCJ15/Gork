@@ -9,7 +9,7 @@ namespace Gork
     /// <summary>
     /// Is a constant <see cref="string"/> value.
     /// </summary>
-    [GorkNodeInfo("Constant/Constant String", "443A1E")]
+    [GorkNodeInfo("Constant/Constant String", GorkColors.STRING_COLOR)]
     [NoInputPorts]
     [GorkOutputPort("Value", typeof(string))]
     public class ConstantStringNode : GorkNode

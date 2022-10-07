@@ -12,14 +12,13 @@ using UnityEditor.Experimental.GraphView;
 namespace Gork
 {
     /// <summary>
-    /// 
+    /// A <see cref="GorkNode"/> that will start a mulit choice option list.
     /// </summary>
-    [GorkNodeInfo("Dialogue/Multi Choice Dialogue", DialogueNode.COLOR)]
-    [NoOutputPorts]
+    [GorkNodeInfo("Dialogue/Multi Choice Dialogue", GorkColors.DIALOGUE_COLOR)]
     public class MultiChoiceDialogueNode : GorkNode
     {
         [TextArea(1, 5)]
-        public string[] Choices = new string[] { "Choice 1" };
+        public string[] Choices = new string[] { "Yes", "No" };
 
 #if UNITY_EDITOR
         public override void Initialize(Node node)
@@ -42,6 +41,8 @@ namespace Gork
             _list.drawElementCallback = DrawElementCallback;
 
             _list.elementHeight = 60;
+
+            UpdatePorts();
         }
 
         private void DrawHeaderCallback(Rect rect)
@@ -52,8 +53,8 @@ namespace Gork
         private void DrawElementCallback(Rect rect, int index, bool isActive, bool isFocused)
         {
             SerializedProperty prop = _list.serializedProperty.GetArrayElementAtIndex(index);
-
-            EditorGUI.PropertyField(rect, prop);
+            
+            EditorGUI.PropertyField(rect, prop, new GUIContent($"Choice {index + 1}"));
         }
 
         protected override void OnInspectorGUI()
@@ -62,9 +63,37 @@ namespace Gork
 
             serializedObject.UpdateIfRequiredOrScript();
 
+            int oldSize = _property.arraySize;
+
             _list.DoLayoutList();
 
-            serializedObject.ApplyModifiedProperties();
+            if (serializedObject.ApplyModifiedProperties())
+            {
+                if (oldSize != _property.arraySize)
+                {
+                    UpdatePorts();
+
+                    UpdateNodeView();
+                }
+            }
+        }
+
+        private void UpdatePorts()
+        {
+            int length = _property.arraySize;
+            int portCount = OutputPorts.Count;
+            int max = Mathf.Max(portCount, length);
+
+            for (int i = 0; i < max; i++)
+            {
+                if (i >= length)
+                {
+                    DeleteOutputPort(i);
+                    continue;
+                }
+
+                SetOutputPort(i, $"Choice {i + 1}");
+            }
         }
 #endif
     }

@@ -10,7 +10,7 @@ namespace Gork
     /// <summary>
     /// Is a constant <see cref="int"/> value.
     /// </summary>
-    [GorkNodeInfo("Constant/Constant Int", "28233E")]
+    [GorkNodeInfo("Constant/Constant Int", GorkColors.INT_COLOR)]
     [NoInputPorts]
     [GorkOutputPort("Value", typeof(int))]
     public class ConstantIntNode : GorkNode

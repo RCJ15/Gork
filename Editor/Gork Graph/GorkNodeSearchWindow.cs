@@ -9,7 +9,7 @@ using UnityEditor.Experimental.GraphView;
 namespace Gork.Editor
 {
     /// <summary>
-    /// 
+    /// The search window that allows you to create a <see cref="GorkNode"/>.
     /// </summary>
     public class GorkNodeSearchWindow : ScriptableObject, ISearchWindowProvider
     {
@@ -18,6 +18,7 @@ namespace Gork.Editor
         private List<SearchTreeEntry> _searchTree = null;
 
         public Vector2 Position;
+        public GorkPort EdgePort;
 
         public List<SearchTreeEntry> CreateSearchTree(SearchWindowContext context)
         {
@@ -100,15 +101,82 @@ namespace Gork.Editor
                 Type nodeType = GorkNodeInfoAttribute.AttributeTypes[attribute];
 
                 GUIContent content = new GUIContent(attribute.NodeName);
-                content.image = EditorGUIUtility.ObjectContent(null, nodeType).image;
+
+                Color? nullableColor = attribute.GetColor();
+
+                if (nullableColor.HasValue)
+                {
+                    Color color = nullableColor.Value;
+
+                    float val = Mathf.Max(color.r, color.g, color.b);
+                    val = 1 / val;
+
+                    color *= val;
+                    color.a = 1;
+
+                    Texture2D tex = new Texture2D(1, 1);
+                    tex.SetPixel(0, 0, color);
+                    tex.Apply();
+
+                    content.image = tex;
+                }
 
                 SearchTreeEntry entry = new SearchTreeEntry(content);
 
                 entry.level = entryTitle.Length;
-                entry.userData = new Action<Vector2>(pos => GraphView.CreateNode(nodeType, pos));
+                entry.userData = new Action<Vector2>(pos =>
+                {
+                    string displayName = GorkNodeInfoAttribute.TypeAttributes.ContainsKey(nodeType) ? GorkNodeInfoAttribute.TypeAttributes[nodeType].NodeName : nodeType.Name;
+                    Undo.RecordObject(GraphView.Graph, $"Created {displayName}");
+
+                    GorkNodeView nodeView = GraphView.CreateNode(nodeType, pos);
+
+                    if (EdgePort != null)
+                    {
+                        GorkPort otherPort = null;
+                        GorkEdge edge = null;
+
+                        // Is input
+                        if (EdgePort.direction == Direction.Input)
+                        {
+                            if (nodeView.OutputPorts.Count > 0)
+                            {
+                                otherPort = nodeView.OutputPorts[0];
+
+                                edge = EdgePort.GorkConnectTo(otherPort);
+                            }
+                        }
+                        // Is output
+                        else
+                        {
+                            if (nodeView.InputPorts.Count > 0)
+                            {
+                                otherPort = nodeView.InputPorts[0];
+
+                                edge = otherPort.GorkConnectTo(EdgePort);
+                            }
+                        }
+
+                        if (otherPort != null)
+                        {
+                            GraphViewChange change = new GraphViewChange() { edgesToCreate = new List<Edge>() };
+
+                            change.edgesToCreate.Add(edge);
+                            GraphView.graphViewChanged.Invoke(change);
+
+                            GraphView.AddElement(edge);
+                        }
+
+                    }
+
+                    EdgePort = null;
+                    //Edge = null;
+
+                    GraphView.SaveAsset(false);
+                });
+
                 _searchTree.Add(entry);
             }
-
 
             return _searchTree;
         }

@@ -79,6 +79,17 @@ namespace Gork.Editor
             _graphView = root.Q<GorkGraphView>();
             Undo.undoRedoPerformed += _graphView.OnUndoRedo;
 
+            // Ping object
+            root.Q<ToolbarButton>("FindAsset").clicked += () =>
+            {
+                if (_graphView.Graph == null)
+                {
+                    return;
+                }
+
+                EditorGUIUtility.PingObject(_graphView.Graph);
+            };
+
             // Open the currently selected graph TODO: Remove this and replace it with a way to save between sessions
             GorkGraph selectedGraph = Selection.activeObject as GorkGraph;
 

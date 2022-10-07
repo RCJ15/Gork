@@ -35,7 +35,7 @@ namespace Gork.Editor
 
         private Label _titleLabel;
         
-        public GorkNodeView(GorkNode node, GorkGraphView graphView)
+        public GorkNodeView(GorkNode node, GorkGraphView graphView, List<FieldData> fieldData = null)
         {
             _titleLabel = titleContainer.Q<Label>(name: "title-label");
 
@@ -124,6 +124,11 @@ namespace Gork.Editor
 
             Node.Title = _titleLabel.text;
 
+            if (fieldData != null)
+            {
+                LoadFromFieldData(fieldData);
+            }
+
             // Initialize view
             Node.Initialize(this);
             Node.OnViewEnable();
@@ -182,12 +187,30 @@ namespace Gork.Editor
                         GorkPort port = list[i];
                         list.RemoveAt(i);
 
+                        List<Action> performLater = new List<Action>();
+
                         foreach (Edge edge in port.connections)
                         {
+                            GorkPort inputPort = edge.input as GorkPort;
+                            GorkPort outputPort = edge.output as GorkPort;
+
+                            performLater.Add(() =>
+                            {
+                                inputPort.Disconnect(edge);
+                                outputPort.Disconnect(edge);
+                            });
+
                             GraphView.RemoveElement(edge);
                         }
 
+                        foreach (Action action in performLater)
+                        {
+                            action?.Invoke();
+                        }
+
                         container.Remove(port);
+
+                        Node.RemoveConnections(i);
                         continue;
                     }
 
@@ -320,7 +343,7 @@ namespace Gork.Editor
         /// Copied from: https://github.com/Unity-Technologies/UnityCsReference/blob/3fcad4bbbea0455588843799c67861f7b9eb3825/Modules/GraphViewEditor/Elements/Node.cs <para/>
         /// Will add all <see cref="Edge"/> connections on the <paramref name="container"/> to the <paramref name="hashSet"/>.
         /// </summary>
-        private void AddConnectionsToHashSet(VisualElement container, ref HashSet<GraphElement> hashSet)
+        private void AddConnectionsToHashSet(VisualElement container, ref HashSet<Edge> hashSet)
         {
             hashSet.UnionWith(GetConnections(container));
         }
@@ -352,14 +375,44 @@ namespace Gork.Editor
         /// Copied from: https://github.com/Unity-Technologies/UnityCsReference/blob/3fcad4bbbea0455588843799c67861f7b9eb3825/Modules/GraphViewEditor/Elements/Node.cs <para/>
         /// Will remove all <see cref="Edge"/> connections from this node.
         /// </summary>
-        public void DisconnectAll()
+        public void DisconnectAll(bool recordUndo = false)
         {
-            HashSet<GraphElement> toDelete = new HashSet<GraphElement>();
+            HashSet<Edge> toDelete = new HashSet<Edge>();
 
             AddConnectionsToHashSet(inputContainer, ref toDelete);
             AddConnectionsToHashSet(outputContainer, ref toDelete);
 
             toDelete.Remove(null);
+
+            if (recordUndo)
+            {
+                foreach (Edge edge in toDelete)
+                {
+                    if (edge == null)
+                    {
+                        continue;
+                    }
+
+                    if (edge.input.node == this)
+                    {
+                        if (edge.output.node == null)
+                        {
+                            continue;
+                        }
+
+                        Undo.RecordObject((edge.output.node as GorkNodeView).Node, "Removed Connections");
+                    }
+                    else
+                    {
+                        if (edge.input.node == null)
+                        {
+                            continue;
+                        }
+
+                        Undo.RecordObject((edge.input.node as GorkNodeView).Node, "Removed Connections");
+                    }
+                }
+            }
 
             GraphView.DeleteElements(toDelete);
         }
@@ -368,7 +421,7 @@ namespace Gork.Editor
         {
             base.SetPosition(newPos);
             
-            Undo.RecordObject(Node, $"Moved {title} Node");
+            Undo.RecordObject(Node, $"Moved \"{title}\" Node");
             Node.Position = newPos.min;
         }
 
@@ -383,6 +436,7 @@ namespace Gork.Editor
             SetPortName(port, name, type, displayType);
 
             // Add to list
+            port.PortIndex = InputPorts.Count;
             InputPorts.Add(port);
 
             // Add to container
@@ -403,6 +457,7 @@ namespace Gork.Editor
             SetPortName(port, name, type, displayType);
 
             // Add to list
+            port.PortIndex = OutputPorts.Count;
             OutputPorts.Add(port);
 
             // Add to container
@@ -451,6 +506,7 @@ namespace Gork.Editor
         #region PasteData
         public PasteData GetPasteData() => new PasteData()
         {
+            GUID = Node.GUID,
             Position = Node.Position,
             NodeType = _nodeType.AssemblyQualifiedName,
             FieldData = GetFieldData(),
@@ -477,6 +533,7 @@ namespace Gork.Editor
         [Serializable]
         public class PasteData
         {
+            public string GUID;
             public Vector2 Position;
             public string NodeType;
             public List<FieldData> FieldData;

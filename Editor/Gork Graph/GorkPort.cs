@@ -18,6 +18,7 @@ namespace Gork.Editor
 
         public GorkGraphView GraphView;
 
+        /*
         public int PortIndex
         {
             get
@@ -34,6 +35,8 @@ namespace Gork.Editor
                 }
             }
         }
+        */
+        public int PortIndex;
 
         private static readonly Color _boolColor = new Color(0.549f, 1, 0.556f, 1);
 
@@ -88,7 +91,7 @@ namespace Gork.Editor
         {
             GorkPort port = new GorkPort(orientation, direction, Capacity.Multi, type, nodeView);
             
-            port.m_EdgeConnector = new EdgeConnector<GorkEdge>(new EdgeConnector(nodeView));
+            port.m_EdgeConnector = new EdgeConnector<GorkEdge>(new EdgeConnector(nodeView, port));
 
             port.AddManipulator(port.m_EdgeConnector);
             return port;
@@ -101,14 +104,16 @@ namespace Gork.Editor
         {
             private GorkNodeView _nodeView;
             private GorkNode _node;
+            private GorkPort _port;
 
             private GraphViewChange _graphViewChange;
             private List<Edge> _edgesToCreate;
 
-            public EdgeConnector(GorkNodeView nodeView)
+            public EdgeConnector(GorkNodeView nodeView, GorkPort port)
             {
                 _nodeView = nodeView;
                 _node = _nodeView.Node;
+                _port = port;
 
                 _edgesToCreate = new List<Edge>();
 
@@ -117,10 +122,12 @@ namespace Gork.Editor
 
             public void OnDropOutsidePort(Edge edge, Vector2 position)
             {
-                //Vector2 mousePos = GUIUtility.GUIToScreenPoint(Event.current.mousePosition);
-                NodeCreationContext context = new NodeCreationContext() { screenMousePosition = position };
+                NodeCreationContext context = new NodeCreationContext() { screenMousePosition = GUIUtility.GUIToScreenPoint(Event.current.mousePosition) };
 
-                _nodeView.GraphView.nodeCreationRequest?.Invoke(context);
+                GorkGraphView graph = _nodeView.GraphView;
+                graph.GorkSearchWindow.Position = graph.TransformScreenPos(position);
+                graph.GorkSearchWindow.EdgePort = _port;
+                graph.nodeCreationRequest.Invoke(context);
             }
 
             public void OnDrop(GraphView graphView, Edge edge)

@@ -13,7 +13,10 @@ namespace Gork
     /// The main data container for Gork. A <see cref="ScriptableObject"/> which contains many <see cref="GorkNode"/>s.
     /// </summary>
     [CreateAssetMenu(fileName = "New Gork Graph", menuName = "Gork Graph", order = 150)]
-    public class GorkGraph : ScriptableObject
+    public class GorkGraph : ScriptableObject,
+#if UNITY_EDITOR
+        ISerializationCallbackReceiver
+#endif
     {
         public List<GorkNode> Nodes = new List<GorkNode>();
 
@@ -36,6 +39,32 @@ namespace Gork
                 Pos = pos;
             }
         }
+
+        public HashSet<GorkNode> NodesInGroups = new HashSet<GorkNode>();
+        public Dictionary<GorkNode, GroupData> GetNodeGroup = new Dictionary<GorkNode, GroupData>();
+
+        public void OnBeforeSerialize()
+        {
+
+        }
+
+        public void OnAfterDeserialize()
+        {
+            foreach (GroupData group in GorkGroups)
+            {
+                foreach (GorkNode node in group.Nodes)
+                {
+                    GetNodeGroup[node] = group;
+
+                    if (NodesInGroups.Contains(node))
+                    {
+                        continue;
+                    }
+
+                    NodesInGroups.Add(node);
+                }
+            }
+        }
 #endif
         #endregion
 
@@ -54,57 +83,22 @@ namespace Gork
             // Generate new unique GUID
             node.GUID = GUID.Generate().ToString();
 
-            // Register undo
-            int group = Undo.GetCurrentGroup();
-
-            string displayName = GorkNodeInfoAttribute.TypeAttributes.ContainsKey(nodeType) ? GorkNodeInfoAttribute.TypeAttributes[nodeType].NodeName : nodeType.Name;
-            Undo.SetCurrentGroupName($"Created {displayName}");
-
             Undo.RegisterCreatedObjectUndo(node, "Create node asset");
 
             // Add the node as a child of this asset
             AssetDatabase.AddObjectToAsset(node, this);
-            AssetDatabase.SaveAssets();
-
-            Undo.RecordObject(this, "Add node to list");
 #endif
 
             // Add node to list
             Nodes.Add(node);
-
-#if UNITY_EDITOR
-            Undo.CollapseUndoOperations(group);
-#endif
 
             return node;
         }
 
         public void DeleteNode(GorkNode node)
         {
-#if UNITY_EDITOR
-            int group = Undo.GetCurrentGroup();
-
-            Type nodeType = node.GetType();
-            string displayName = GorkNodeInfoAttribute.TypeAttributes.ContainsKey(nodeType) ? GorkNodeInfoAttribute.TypeAttributes[nodeType].NodeName : nodeType.Name;
-            Undo.SetCurrentGroupName($"Deleted {displayName}");
-
-            Undo.RecordObject(this, "Removed node from list");
-#endif
             // Remove node from list
             Nodes.Remove(node);
-
-#if UNITY_EDITOR
-            // Remove the node from the asset
-            Undo.DestroyObjectImmediate(node);
-
-            //AssetDatabase.RemoveObjectFromAsset(node); // This one doesn't have undo :(
-
-            AssetDatabase.SaveAssets();
-
-            AssetDatabase.ImportAsset(AssetDatabase.GetAssetPath(this), ImportAssetOptions.ForceUpdate);
-
-            Undo.CollapseUndoOperations(group);
-#endif
         }
 
         public void AddConnection(GorkNode parent, int parentPort, GorkNode child, int childPort)
@@ -113,7 +107,7 @@ namespace Gork
             List<GorkNode.Connection> list = parent.GetConnections(parentPort);
 
 #if UNITY_EDITOR
-            Undo.RecordObject(parent, $"Added connection(s) to {parent.name}");
+            Undo.RecordObject(parent, $"Added connection to \"{parent.name}\"");
 #endif
             // Add the connection to the list
             list.Add(new GorkNode.Connection(childPort, child));
@@ -125,7 +119,10 @@ namespace Gork
             List<GorkNode.Connection> list = parent.GetConnections(parentPort);
 
 #if UNITY_EDITOR
-            Undo.RecordObject(parent, $"Removed connection(s) from {parent.name}");
+            if (parent != null)
+            {
+                Undo.RecordObject(parent, $"Removed connection from \"{parent.name}\"");
+            }
 #endif
 
             // Remove the connection from the list

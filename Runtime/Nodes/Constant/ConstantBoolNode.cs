@@ -9,7 +9,7 @@ namespace Gork
     /// <summary>
     /// Is a constant <see cref="bool"/> value.
     /// </summary>
-    [GorkNodeInfo("Constant/Constant Bool", "264526")]
+    [GorkNodeInfo("Constant/Constant Bool", GorkColors.BOOL_COLOR)]
     [NoInputPorts]
     [GorkOutputPort("Value", typeof(bool))]
     public class ConstantBoolNode : GorkNode
@@ -25,17 +25,6 @@ namespace Gork
             {
                 Undo.RecordObject(this, $"Modified Property in {name}");
                 Value = data.newValue;
-
-                if (Value)
-                {
-                    SetOutputPort(1, $"Test");
-                }
-                else
-                {
-                    DeleteOutputPort(1);
-                }
-
-                UpdateNodeView();
             });
 
             node.inputContainer.Add(field);

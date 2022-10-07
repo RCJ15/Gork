@@ -10,7 +10,7 @@ namespace Gork
     /// <summary>
     /// Is a constant <see cref="float"/> value.
     /// </summary>
-    [GorkNodeInfo("Constant/Constant Float", "243E3E")]
+    [GorkNodeInfo("Constant/Constant Float", GorkColors.FLOAT_COLOR)]
     [NoInputPorts]
     [GorkOutputPort("Value", typeof(float))]
     public class ConstantFloatNode : GorkNode

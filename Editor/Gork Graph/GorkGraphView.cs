@@ -20,10 +20,16 @@ namespace Gork.Editor
         public new class UxmlFactory : UxmlFactory<GorkGraphView, UxmlTraits> { }
 
         public GorkGraph Graph;
+        public string GraphPath => AssetDatabase.GetAssetPath(Graph);
+        public GUID GraphGUID(string assetPath) => AssetDatabase.GUIDFromAssetPath(assetPath);
         private GorkNodeSearchWindow _searchWindow;
+        public GorkNodeSearchWindow GorkSearchWindow => _searchWindow;
         private Vector3 _cachedMousePos;
+        public Vector3 MousePos => TransformScreenPos(_cachedMousePos);
+        public Vector2 TransformScreenPos(Vector2 screenPos) => viewTransform.matrix.inverse.MultiplyPoint(screenPos);
 
         public Dictionary<GorkNode, GorkNodeView> SubscribedNodes = new Dictionary<GorkNode, GorkNodeView>();
+        public Dictionary<GorkGraph.GroupData, GorkGroup> GorkGroups = new Dictionary<GorkGraph.GroupData, GorkGroup>();
 
         protected override bool canDeleteSelection => false;
 
@@ -56,43 +62,39 @@ namespace Gork.Editor
             RegisterCallback<MouseMoveEvent>(OnMouseMoveEvent);
 
             // Subscribe to the graphViewChanged callback
-            graphViewChanged += OnGraphViewChange;
+            graphViewChanged += OnGraphViewChanged;
         }
 
         private void OnMouseMoveEvent(MouseMoveEvent evt)
         {
-            _cachedMousePos = evt.mousePosition;
+            //_cachedMousePos = GUIUtility.GUIToScreenPoint(Event.current.mousePosition);
+            _cachedMousePos = evt.localMousePosition;
         }
 
         private void OnValidateCommand(ValidateCommandEvent evt)
         {
             //Debug.Log(evt.commandName);
 
+            PasteData pasteData = null;
+
             //-- Copy & Paste
             if (evt.commandName == "Copy")
             {
-                CopySelection();
+                CopySelection(ref pasteData);
             }
             else if (evt.commandName == "Paste")
             {
-                Paste(-contentViewContainer.WorldToLocal(_cachedMousePos));
+                //Paste(-contentViewContainer.WorldToLocal(_cachedMousePos));
+                //Paste(-_cachedMousePos);
+                Paste(MousePos);
             }
             else if (evt.commandName == "Cut")
             {
-                List<GorkNodeView> nodes = CopySelection();
-
-                // Create an undo group
-                int group = Undo.GetCurrentGroup();
-                Undo.SetCurrentGroupName("Cut Nodes");
-
-                // Delete all the copied nodes
-                foreach (GorkNodeView node in nodes)
-                {
-                    node.Delete();
-                }
-
-                // Collapse undo operations
-                Undo.CollapseUndoOperations(group);
+                Cut(ref pasteData);
+            }
+            else if (evt.commandName == "Duplicate")
+            {
+                Duplicate(ref pasteData);
             }
             //-- Misc
             // Select All
@@ -117,6 +119,11 @@ namespace Gork.Editor
 
                 foreach (GraphElement element in selection)
                 {
+                    if (element == null)
+                    {
+                        continue;
+                    }
+
                     elementsToRemove.Add(element);
                 }
 
@@ -130,6 +137,17 @@ namespace Gork.Editor
                     RemoveElement(element);
                 }
             }
+
+            TryAddPasteDataToClipboard(pasteData);
+        }
+
+        private void TryAddPasteDataToClipboard(PasteData data)
+        {
+            if (data != null)
+            {
+                // Set the copy buffer to the json of the string list
+                EditorGUIUtility.systemCopyBuffer = JsonUtility.ToJson(data);
+            }
         }
 
         // This is a destructor
@@ -137,6 +155,20 @@ namespace Gork.Editor
         {
             // Destroy dead Search Window object
             Object.DestroyImmediate(_searchWindow);
+        }
+
+        public void SaveAsset(bool reimportAsset = true)
+        {
+            EditorUtility.SetDirty(Graph);
+
+            string assetPath = GraphPath;
+
+            AssetDatabase.SaveAssetIfDirty(GraphGUID(assetPath));
+
+            if (reimportAsset)
+            {
+                AssetDatabase.ImportAsset(AssetDatabase.GetAssetPath(Graph), ImportAssetOptions.ForceUpdate);
+            }
         }
 
         public void OnUndoRedo()
@@ -148,12 +180,51 @@ namespace Gork.Editor
             }
 
             // Save assets and reimport the graph
-            AssetDatabase.SaveAssets();
+            SaveAsset();
 
-            AssetDatabase.ImportAsset(AssetDatabase.GetAssetPath(Graph), ImportAssetOptions.ForceUpdate);
-
-            // Reopen the graph to refresh the graph view
+            // Reopen the graph to refresh the graph view BAD TAKES TOO LONG!!!
             OpenGraph(Graph);
+
+            /*
+
+            GraphViewChange change = new GraphViewChange();
+            change.elementsToRemove = new List<GraphElement>();
+
+            HashSet<GorkNode> nodesNotCreated = new HashSet<GorkNode>();
+            HashSet<GorkNodeView> nodeViews = new HashSet<GorkNodeView>();
+
+            // Find out what things have changed since the last undo
+            foreach (GorkNode node in Graph.Nodes)
+            {
+                GorkNodeView nodeView = GetNodeView(node);
+
+                if (nodeView == null)
+                {
+                    nodesNotCreated.Add(node);
+                }
+                else
+                {
+                    nodeViews.Add(nodeView);
+                }
+            }
+
+            UQueryState<GraphElement> graphElements = this.graphElements;
+
+            foreach (GraphElement element in graphElements)
+            {
+                GorkNodeView nodeView = element as GorkNodeView;
+
+                if (nodeView != null && nodeViews.Contains(nodeView))
+                {
+                    continue;
+                }
+
+                change.elementsToRemove.Add(element);
+            }
+
+            graphViewChanged.Invoke(change);
+
+            */
 
             Debug.Log("On undo Redo");
         }
@@ -161,7 +232,15 @@ namespace Gork.Editor
         /// <summary>
         /// Returns the <see cref="GorkNodeView"/> for the <see cref="GorkNode"/>.
         /// </summary>
-        public GorkNodeView GetNodeView(GorkNode node) => GetNodeByGuid(node.GUID) as GorkNodeView;
+        public GorkNodeView GetNodeView(GorkNode node)
+        {
+            if (node == null)
+            {
+                return null;
+            }
+
+            return GetNodeByGuid(node.GUID) as GorkNodeView;
+        }
 
         /// <summary>
         /// Removes all previous elements and opens a new <see cref="GorkGraph"/> to edit.
@@ -292,34 +371,63 @@ namespace Gork.Editor
             });
         }
 
-        private GraphViewChange OnGraphViewChange(GraphViewChange change)
+        private GraphViewChange OnGraphViewChanged(GraphViewChange change)
         {
             // Check if we have any elements to remove
             if (change.elementsToRemove != null)
             {
+                int count = change.elementsToRemove.Count;
+                bool deletedNodes = false;
+
                 // Loop through all the elements that are being removed
-                change.elementsToRemove.ForEach(element =>
+                for (int i = 0; i < count; i++)
                 {
+                    GraphElement element = change.elementsToRemove[i];
+
                     // Remove node
                     GorkNodeView nodeView = element as GorkNodeView;
 
                     if (nodeView != null)
                     {
-                        // Delete node from graph
-                        Graph.DeleteNode(nodeView.Node);
+                        nodeView.DisconnectAll(true);
+
+                        if (nodeView.Node != null)
+                        {
+                            deletedNodes = true;
+
+                            GorkNode node = nodeView.Node;
+
+                            Undo.RecordObject(Graph, "Removed Node From List");
+
+                            // Delete node from graph
+                            Graph.DeleteNode(node);
+
+                            // Remove the node from the asset
+                            Undo.DestroyObjectImmediate(node);
+
+                            Type nodeType = node.GetType();
+                            string displayName = GorkNodeInfoAttribute.TypeAttributes.ContainsKey(nodeType) ? GorkNodeInfoAttribute.TypeAttributes[nodeType].NodeName : nodeType.Name;
+                            Undo.SetCurrentGroupName($"Deleted \"{displayName}\"");
+                        }
                     }
 
                     // Remove edge
                     GorkEdge edge = element as GorkEdge;
-                    
+
                     if (edge != null)
                     {
                         // Get both Gork Ports
                         GorkPort childPort = edge.input as GorkPort;
                         GorkPort parentPort = edge.output as GorkPort;
 
-                        // Remove the connection from the Graph
-                        Graph.RemoveConnection(parentPort.Node, parentPort.PortIndex, childPort.Node, childPort.PortIndex);
+                        if (childPort != null && parentPort != null)
+                        {
+                            childPort.Disconnect(edge);
+                            parentPort.Disconnect(edge);
+
+                            // Remove the connection from the Graph
+                            Graph.RemoveConnection(parentPort.Node, parentPort.PortIndex, childPort.Node, childPort.PortIndex);
+                        }
                     }
 
                     // Remove group
@@ -330,11 +438,17 @@ namespace Gork.Editor
                         // Remove GroupData from graph
                         if (Graph.GorkGroups.Contains(group.GroupData))
                         {
-                            Undo.RecordObject(Graph, $"Removed \"{group.name}\" Group");
+                            Undo.RecordObject(Graph, $"Removed \"{group.Text.value}\" Group");
                             Graph.GorkGroups.Remove(group.GroupData);
+                            GorkGroups.Remove(group.GroupData);
                         }
                     }
-                });
+                }
+
+                if (deletedNodes)
+                {
+                    SaveAsset();
+                }
             }
 
             // Check if we have any edges to create
@@ -396,7 +510,7 @@ namespace Gork.Editor
                 GorkGroup group = element as GorkGroup;
 
                 // Check if the cast worked
-                if (groups != null)
+                if (group != null)
                 {
                     // Create the group list if it's not null
                     if (groups == null)
@@ -434,7 +548,7 @@ namespace Gork.Editor
             // This will only add a seperator if any of the lists aren't null
             void AddNodeSeperator()
             {
-                if (nodes != null || edges != null)
+                if (nodes != null || edges != null || groups != null)
                 {
                     evt.menu.AppendSeparator();
                 }
@@ -442,6 +556,8 @@ namespace Gork.Editor
 
             // Add seperator
             AddNodeSeperator();
+
+            PasteData pasteData = null;
 
             // Add options for gork node view
             if (nodes != null)
@@ -456,18 +572,129 @@ namespace Gork.Editor
 
                 // Add options to delete the gork node(s)
                 evt.menu.AppendAction("Delete", _ => nodes.ForEach(n => n.Delete()));
-                //evt.menu.AppendAction("Cut", _ => nodes.ForEach(n => n.Delete()));
+
+                bool insideGroup = false;
+
+                foreach (GorkNodeView node in nodes)
+                {
+                    if (!Graph.NodesInGroups.Contains(node.Node))
+                    {
+                        continue;
+                    }
+
+                    insideGroup = true;
+                    break;
+                }
+
+                // Add option to remove nodes from groups
+                evt.menu.AppendAction("Remove from group", _ => nodes.ForEach(n =>
+                {
+                    Undo.RecordObject(Graph, "Removed Nodes From Group");
+
+                    foreach (GorkNodeView nodeView in nodes)
+                    {
+                        GorkNode node = nodeView.Node;
+
+                        if (!Graph.NodesInGroups.Contains(node))
+                        {
+                            continue;
+                        }
+
+                        if (!Graph.GetNodeGroup.TryGetValue(node, out GorkGraph.GroupData groupData))
+                        {
+                            continue;
+                        }
+
+                        groupData.Nodes.Remove(node);
+
+                        if (!GorkGroups.TryGetValue(groupData, out GorkGroup group))
+                        {
+                            continue;
+                        }
+
+                        if (!group.containedElements.Contains(nodeView))
+                        {
+                            continue;
+                        }
+
+                        group.RemoveElement(nodeView);
+                    }
+
+                }), !insideGroup ? DropdownMenuAction.Status.Disabled : DropdownMenuAction.Status.Normal);
             }
             // Add options for gork edge
             else if (edges != null)
             {
                 // Add option to delete edge(s)
                 evt.menu.AppendAction("Delete", _ => edges.ForEach(e => e.Delete()));
-                evt.menu.AppendAction("Print", _ => edges.ForEach(e => Debug.Log($"{e} | Input: {(e.input.node as GorkNodeView).Node.name} | Output: {(e.output.node as GorkNodeView).Node.name}")));
+            }
+            else if (groups != null)
+            {
+                // Add option to delete group(s)
+                evt.menu.AppendAction("Delete", _ =>
+                {
+                    GraphViewChange change = new GraphViewChange() { elementsToRemove = new List<GraphElement>() };
+
+                    groups.ForEach(g => change.elementsToRemove.Add(g));
+
+                    graphViewChanged.Invoke(change);
+
+                    groups.ForEach(g => RemoveElement(g));
+                });
             }
 
-            // Add seperator (Again)
-            AddNodeSeperator();
+            #region Copy Paste Magic
+            // Add a seperator
+            evt.menu.AppendSeparator();
+
+            bool nothingSelected = nodes == null && groups == null && edges == null;
+
+            // Duplicate
+            evt.menu.AppendAction("Duplicate", _ =>
+            {
+                Duplicate(ref pasteData, nodes, groups, edges);
+
+            }, nothingSelected ? DropdownMenuAction.Status.Disabled : DropdownMenuAction.Status.Normal);
+
+            // Copy
+            evt.menu.AppendAction("Copy", _ =>
+            {
+                CopySelection(ref pasteData, nodes);
+
+                TryAddPasteDataToClipboard(pasteData);
+            }, nothingSelected ? DropdownMenuAction.Status.Disabled : DropdownMenuAction.Status.Normal);
+
+            // Cut
+            evt.menu.AppendAction("Cut", _ =>
+            {
+                Cut(ref pasteData, nodes);
+
+                TryAddPasteDataToClipboard(pasteData);
+            }, nothingSelected ? DropdownMenuAction.Status.Disabled : DropdownMenuAction.Status.Normal);
+
+            PasteData clipboardData;
+
+            // Try to convert clipboard data to json
+            try
+            {
+                clipboardData = JsonUtility.FromJson<PasteData>(EditorGUIUtility.systemCopyBuffer);
+            }
+            catch (Exception)
+            {
+                // Parse failed
+                clipboardData = null;
+            }
+
+            Vector2 cachedMousePos = MousePos;
+
+            // Paste
+            evt.menu.AppendAction("Paste", _ =>
+            {
+                Paste(cachedMousePos, clipboardData);
+            }, clipboardData == null ? DropdownMenuAction.Status.Disabled : DropdownMenuAction.Status.Normal);
+
+            evt.menu.AppendSeparator();
+            #endregion
 
             // Add option to create node
             evt.menu.AppendAction("Create Node", _ =>
@@ -486,6 +713,14 @@ namespace Gork.Editor
 
                 // Add to graph view
                 AddElement(group);
+
+                ClearSelection();
+
+                group.OnSelected();
+                group.selected = true;
+                selection.Add(group);
+
+                group.FocusTitleTextField();
 
                 // Add group data to graph
                 Undo.RecordObject(Graph, $"Added New Group");
@@ -531,7 +766,7 @@ namespace Gork.Editor
             return compatiblePorts;
         }
 
-        public GorkNodeView CreateNode(Type nodeType, Vector2 position)
+        public GorkNodeView CreateNode(Type nodeType, Vector2 position, List<GorkNodeView.FieldData> fieldData = null)
         {
             if (nodeType == null)
             {
@@ -541,17 +776,17 @@ namespace Gork.Editor
             GorkNode node = Graph.CreateNode(nodeType);
             node.Position = position;
 
-            return CreateNodeView(node);
+            return CreateNodeView(node, fieldData);
         }
 
-        private GorkNodeView CreateNodeView(GorkNode node)
+        private GorkNodeView CreateNodeView(GorkNode node, List<GorkNodeView.FieldData> fieldData = null)
         {
             if (node == null)
             {
                 return null;
             }
 
-            GorkNodeView nodeView = new GorkNodeView(node, this);
+            GorkNodeView nodeView = new GorkNodeView(node, this, fieldData);
 
             AddElement(nodeView);
 
@@ -560,15 +795,23 @@ namespace Gork.Editor
 
         #region Reading & Writing PasteData
         /// <summary>
-        /// Copies all the currently selected <see cref="GorkNodeView"/> and writes them to the <see cref="EditorGUIUtility.systemCopyBuffer"/>. <para/>
-        /// Will also return the currently selected nodes in case you want to use those.
+        /// Copies all the currently selected <see cref="GorkNodeView"/>, <see cref="GorkGroup"/> and <see cref="GorkEdge"/> and writes them to the <paramref name="pasteData"/>. <para/>
+        /// Will also return the currently selected <see cref="GraphElement"/> in case you want to use those.
         /// </summary>
-        private List<GorkNodeView> CopySelection(List<GorkNodeView> selectedElements = null)
+        private IEnumerable<GraphElement> CopySelection(ref PasteData pasteData, IEnumerable<GorkNodeView> nodes = null, IEnumerable<GorkGroup> groups = null, IEnumerable<GorkEdge> edges = null)
         {
-            // Create own list if the provided list is nonexistent
-            if (selectedElements == null)
+            if (pasteData == null)
             {
-                selectedElements = new List<GorkNodeView>();
+                pasteData = new PasteData();
+            }
+
+            // Create own list if one of provided list is nonexistent
+            if (nodes == null)
+            {
+                nodes = selection.OfType<GorkNodeView>();
+
+                /*
+                selectedElements = new List<GraphElement>();
 
                 // Populate the list with our selected objects
                 // Also auto fail if we have nothing selected
@@ -588,92 +831,272 @@ namespace Gork.Editor
                         selectedElements.Add(node);
                     }
                 }
+                */
             }
 
-            // No nodes = no copy
-            if (selectedElements.Count <= 0)
+            if (groups == null)
             {
-                return selectedElements;
+                groups = selection.OfType<GorkGroup>();
             }
 
-            // Create a list of PasteData which we are going to write to our clipboard by converting to json
-            PasteData data = new PasteData();
-
-            // Loop through all of our nodes
-            foreach (GorkNodeView node in selectedElements)
+            if (edges == null)
             {
-                // Add paste data
-                data.Nodes.Add(node.GetPasteData());
+                edges = selection.OfType<GorkEdge>();
             }
 
-            // Set the copy buffer to the json of the string list
-            EditorGUIUtility.systemCopyBuffer = JsonUtility.ToJson(data);
+            // Copy nodes
+            if (nodes.Count() > 0)
+            {
+                // Loop through all of our nodes
+                foreach (GorkNodeView node in nodes)
+                {
+                    // Add paste data
+                    pasteData.Nodes.Add(node.GetPasteData());
+                }
+            }
 
-            return selectedElements;
+            // Copy groups
+            if (groups.Count() > 0)
+            {
+                // Loop through all of our nodes
+                foreach (GorkGroup group in groups)
+                {
+                    // Add paste data
+                    pasteData.Groups.Add(group.GetPasteData());
+                }
+            }
+
+            // Copy edges
+            if (edges.Count() > 0)
+            {
+                // Loop through all of our nodes
+                foreach (GorkEdge edge in edges)
+                {
+                    // Add paste data
+                    pasteData.Edges.Add(edge.GetPasteData());
+                }
+            }
+
+            // Join all elements together
+            IEnumerable<GraphElement> graphElements = nodes;
+
+            return graphElements.Concat(groups).Concat(edges);
+        }
+
+        /// <summary>
+        /// Does the exact same thing as <see cref="CopySelection"/> but will also delete all the copied elements.
+        /// </summary>
+        private void Cut(ref PasteData pasteData, IEnumerable<GorkNodeView> nodes = null, IEnumerable<GorkGroup> groups = null, IEnumerable<GorkEdge> edges = null)
+        {
+            IEnumerable<GraphElement> elements = CopySelection(ref pasteData, nodes, groups, edges);
+
+            List<GraphElement> elementsToRemove = elements.ToList();
+            graphViewChanged.Invoke(new GraphViewChange() { elementsToRemove = elementsToRemove });
+
+            // Remove elements
+            foreach (GraphElement element in elementsToRemove)
+            {
+                RemoveElement(element);
+            }
+
+            // Set undo group name
+            Undo.SetCurrentGroupName("Cut Objects");
         }
 
         /// <summary>
         /// Pastes the <see cref="PasteData"/> on the <see cref="EditorGUIUtility.systemCopyBuffer"/>. Will do nothing if the <see cref="PasteData"/> conversion failed.
         /// </summary>
-        private void Paste(Vector2 position)
+        private void Paste(Vector2? position = null, PasteData data = null, Vector2? offset = null)
         {
-            Debug.Log(position);
-
-            PasteData data;
-
-            // Try to conver to json
-            try
+            if (data == null)
             {
-                data = JsonUtility.FromJson<PasteData>(EditorGUIUtility.systemCopyBuffer);
+                // Try to convert to json
+                try
+                {
+                    data = JsonUtility.FromJson<PasteData>(EditorGUIUtility.systemCopyBuffer);
+                }
+                catch (Exception)
+                {
+                    return;
+                }
             }
-            catch (Exception)
-            {
-                Debug.Log("FAIL :(");
-                return;
-            }
-
-            Debug.Log("Success!!");
 
             List<GorkNodeView> nodes = new List<GorkNodeView>();
+            List<GorkGroup> groups = new List<GorkGroup>();
+            List<GorkEdge> edges = new List<GorkEdge>();
+
+            Dictionary<string, GorkNodeView> nodeFromGUID = new Dictionary<string, GorkNodeView>();
 
             Vector2 meanPosition = Vector2.zero;
             int meanPosCount = 0;
+
+            ClearSelection();
 
             foreach (GorkNodeView.PasteData nodeData in data.Nodes)
             {
                 // Get the type
                 Type nodeType = Type.GetType(nodeData.NodeType);
 
-                // Ignore this if the type getting was unsuccessful
+                // Ignore this if getting the type was unsuccessful
                 if (nodeType == null)
                 {
                     continue;
                 }
 
                 // Create a new node
-                GorkNodeView nodeView = CreateNode(nodeType, nodeData.Position);
-                nodeView.LoadFromFieldData(nodeData.FieldData);
+                GorkNodeView nodeView = CreateNode(nodeType, nodeData.Position, nodeData.FieldData);
+                //nodeView.LoadFromFieldData(nodeData.FieldData);
 
                 nodes.Add(nodeView);
+                nodeFromGUID.Add(nodeData.GUID, nodeView);
 
                 // Add to the mean position
-                meanPosition += nodeData.Position;
-                meanPosCount++;
-            }
-
-            ClearSelection();
-
-            meanPosition /= meanPosCount;
-
-            Vector2 offset = meanPosition - position;
-
-            foreach (GorkNodeView nodeView in nodes)
-            {
-                nodeView.Node.Position += offset;
-                nodeView.UpdatePosition(nodeView.Node.Position);
+                if (position.HasValue)
+                {
+                    meanPosition += nodeData.Position;
+                    meanPosCount++;
+                }
 
                 AddToSelection(nodeView);
             }
+
+            SaveAsset(false);
+
+            if (position.HasValue)
+            {
+                meanPosition /= meanPosCount;
+            }
+
+            foreach (GorkNodeView nodeView in nodes)
+            {
+                if (position.HasValue)
+                {
+                    nodeView.Node.Position -= meanPosition;
+                    nodeView.Node.Position += position.Value;
+                }
+
+                if (offset.HasValue)
+                {
+                    nodeView.Node.Position += offset.Value;
+                }
+
+                nodeView.UpdatePosition(nodeView.Node.Position);
+            }
+
+            foreach (GorkGroup.PasteData groupData in data.Groups)
+            {
+                Undo.RecordObject(Graph, "Added Group");
+                GorkGraph.GroupData graphGroupData = new GorkGraph.GroupData(groupData.Name, position.HasValue ? groupData.Position - meanPosition + position.Value : groupData.Position);
+                Graph.GorkGroups.Add(graphGroupData);
+
+                // Create new GorkGroup
+                GorkGroup group = new GorkGroup(graphGroupData, this);
+
+                // Add to graph view
+                AddElement(group);
+
+                // Loop through all of our nodes in the groupData
+                foreach (string guid in groupData.Nodes)
+                {
+                    if (!nodeFromGUID.TryGetValue(guid, out GorkNodeView node))
+                    {
+                        continue;
+                    }
+
+                    // Add node to group
+                    group.AddElement(node);
+                }
+
+                groups.Add(group);
+
+                group.UpdateGeometryFromContent();
+
+                // AddToSelection doesn't work so I have to do this thing instead
+                selection.Add(group);
+                group.selected = true;
+                group.OnSelected();
+            }
+
+            bool TryGetPort(GorkNodeView node, int index, bool isInputPort, out GorkPort port)
+            {
+                if (index < 0)
+                {
+                    port = null;
+                    return false;
+                }
+
+                List<GorkPort> ports;
+
+                if (isInputPort)
+                {
+                    ports = node.InputPorts;
+                }
+                else
+                {
+                    ports = node.OutputPorts;
+                }
+
+                int length = ports.Count;
+
+                if (index >= length)
+                {
+                    port = null;
+                    return false;
+                }
+
+                port = ports[index];
+                return true;
+            }
+
+            GraphViewChange change = new GraphViewChange();
+            change.edgesToCreate = new List<Edge>();
+
+            foreach (GorkEdge.PasteData edgeData in data.Edges)
+            {
+                if (!nodeFromGUID.TryGetValue(edgeData.Input, out GorkNodeView inputNode))
+                {
+                    continue;
+                }
+
+                if (!nodeFromGUID.TryGetValue(edgeData.Output, out GorkNodeView outputNode))
+                {
+                    continue;
+                }
+
+                if (!TryGetPort(inputNode, edgeData.InputPortIndex, true, out GorkPort inputPort))
+                {
+                    continue;
+                }
+
+                if (!TryGetPort(outputNode, edgeData.OutputPortIndex, false, out GorkPort outputPort))
+                {
+                    continue;
+                }
+
+                GorkEdge edge = inputPort.GorkConnectTo(outputPort);
+
+                AddElement(edge);
+
+                edges.Add(edge);
+
+                change.edgesToCreate.Add(edge);
+
+                // AddToSelection doesn't work so I have to do this thing instead
+                selection.Add(edge);
+                edge.selected = true;
+                edge.OnSelected();
+            }
+
+            graphViewChanged.Invoke(change);
+            
+            Undo.SetCurrentGroupName("Pasted Nodes");
+        }
+
+        private void Duplicate(ref PasteData pasteData, IEnumerable<GorkNodeView> nodes = null, IEnumerable<GorkGroup> groups = null, IEnumerable<GorkEdge> edges = null)
+        {
+            CopySelection(ref pasteData, nodes, groups, edges);
+
+            Paste(null, pasteData, new Vector2(30, 30));
         }
 
         [Serializable]

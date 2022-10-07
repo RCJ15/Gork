@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEditor;
 using UnityEngine.UIElements;
 using UnityEditor.Experimental.GraphView;
+using System;
 
 namespace Gork.Editor
 {
@@ -48,15 +49,25 @@ namespace Gork.Editor
         }
 
         #region PasteData
-        [SerializeField]
+        [Serializable]
         public class PasteData
         {
-            [SerializeReference]
-            public GorkNode Input;
+            public string Input;
+            public int InputPortIndex;
 
-            [SerializeReference]
-            public GorkNode Output;
+            public string Output;
+            public int OutputPortIndex;
         }
+
+        public PasteData GetPasteData() => new PasteData()
+        {
+            // Spaghetti
+            Input = (input.node as GorkNodeView).Node.GUID,
+            InputPortIndex = (input as GorkPort).PortIndex,
+
+            Output = (output.node as GorkNodeView).Node.GUID,
+            OutputPortIndex = (output as GorkPort).PortIndex,
+        };
         #endregion
     }
 }
