@@ -1,3 +1,6 @@
+using System;
+using System.Reflection;
+using System.IO;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -12,7 +15,7 @@ namespace Gork.Editor
     {
         #region GetPath
         private static string _path = null;
-        public static string Path
+        public static string GorkPath
         {
             get
             {
@@ -33,7 +36,7 @@ namespace Gork.Editor
 
                 if (string.IsNullOrEmpty(_path))
                 {
-                    throw new System.Exception("The file GorkGraphEditor.cs has been renamed.");
+                    throw new Exception("The file GorkGraphEditor.cs has been renamed.");
                 }
 
                 return _path;
@@ -41,12 +44,21 @@ namespace Gork.Editor
         }
         public static string GetPath(string extension)
         {
-            return System.IO.Path.ChangeExtension(Path, extension);
+            return Path.ChangeExtension(GorkPath, extension);
         }
-#endregion
+        #endregion
+
+        private VisualElement _parent;
+        private Label _noGraphText;
+
+        private Label _currentlyEditingText;
+        private string _currentlyEditingDefaultText;
 
         private GorkGraph _graph;
         private GorkGraphView _graphView;
+
+        // Getting current open file path in the project window using System.Reflection
+        private MethodInfo _getFolderPath = typeof(ProjectWindowUtil).GetMethod("GetActiveFolderPath", BindingFlags.Static | BindingFlags.NonPublic);
 
         [MenuItem("Window/Gork Graph Editor")]
         public static GorkGraphEditor Open()
@@ -79,6 +91,7 @@ namespace Gork.Editor
             _graphView = root.Q<GorkGraphView>();
             Undo.undoRedoPerformed += _graphView.OnUndoRedo;
 
+            #region Toolbar Buttons
             // Ping object
             root.Q<ToolbarButton>("FindAsset").clicked += () =>
             {
@@ -89,6 +102,165 @@ namespace Gork.Editor
 
                 EditorGUIUtility.PingObject(_graphView.Graph);
             };
+
+            // Save as
+            root.Q<ToolbarButton>("SaveCopy").clicked += () =>
+            {
+                GorkGraph currentGraph = _graphView.Graph;
+
+                if (currentGraph == null)
+                {
+                    return;
+                }
+
+                string oldPath = AssetDatabase.GetAssetPath(currentGraph);
+
+                // Get the currently open path in the project window
+                string projectPath = _getFolderPath.Invoke(null, new object[0]).ToString();
+
+                // Open file explorer
+                string path = EditorUtility.SaveFilePanel($"Save a copy of \"{currentGraph.name}\"", projectPath, currentGraph.name, "asset");
+
+                // Return conditions
+                if (string.IsNullOrEmpty(path))
+                {
+                    return;
+                }
+
+                if (!path.EndsWith(".asset"))
+                {
+                    return;
+                }
+
+                // Get the File Name of the path
+                string fileName = Path.GetFileName(path);
+
+                // Remove the dataPath part of the path
+                path = path.Substring(Application.dataPath.Length - 6);
+
+                // Not valid path (we remove the file name part of the path to check only the folder)
+                if (!AssetDatabase.IsValidFolder(path.Substring(0, path.Length - fileName.Length)))
+                {
+                    Debug.LogWarning("Not a valid file path!");
+                    return;
+                }
+
+                if (!AssetDatabase.CopyAsset(oldPath, path))
+                {
+                    Debug.LogWarning($"Failed to copy \"{oldPath}\" to \"{path}\"");
+                    return;
+                }
+
+                GorkGraph graph = AssetDatabase.LoadMainAssetAtPath(path) as GorkGraph;
+
+                OpenGraph(graph);
+
+                // Update selection
+                Selection.objects = new UnityEngine.Object[] { graph };
+            };
+            #endregion
+
+            #region No Graph State
+            // Disable the parent of the Graph
+            _parent = root.Q<VisualElement>("Parent");
+            _parent.SetEnabled(false);
+
+            // Get the No Graph Text
+            _noGraphText = root.Q<Label>("NoGraphText");
+
+            // Create New Button
+            _noGraphText.Q<Button>("CreateNewButton").clicked += () =>
+            {
+                // Get the currently open path in the project window
+                string projectPath = _getFolderPath.Invoke(null, new object[0]).ToString();
+
+                // Open file explorer
+                string path = EditorUtility.SaveFilePanel("Save a Gork Graph", projectPath, "Gork Graph", "asset");
+
+                // Return conditions
+                if (string.IsNullOrEmpty(path))
+                {
+                    return;
+                }
+
+                if (!path.EndsWith(".asset"))
+                {
+                    return;
+                }
+
+                // Get the File Name of the path
+                string fileName = Path.GetFileName(path);
+
+                // Remove the dataPath part of the path
+                path = path.Substring(Application.dataPath.Length - 6);
+
+                // Not valid path (we remove the file name part of the path to check only the folder)
+                if (!AssetDatabase.IsValidFolder(path.Substring(0, path.Length - fileName.Length)))
+                {
+                    Debug.LogWarning("Not a valid file path!");
+                    return;
+                }
+
+                // Create and open the Gork Graph
+                GorkGraph graph = CreateInstance<GorkGraph>();
+
+                AssetDatabase.CreateAsset(graph, path);
+                OpenGraph(graph);
+
+                // Update selection
+                Selection.objects = new UnityEngine.Object[] { graph };
+            };
+
+            // Open Existing Button
+            _noGraphText.Q<Button>("OpenExistingButton").clicked += () =>
+            {
+                // Get the currently open path in the project window
+                string projectPath = _getFolderPath.Invoke(null, new object[0]).ToString();
+
+                // Open file explorer
+                string path = EditorUtility.OpenFilePanel("Select a Gork Graph to open", projectPath, "asset");
+
+                // Return conditions
+                if (string.IsNullOrEmpty(path))
+                {
+                    return;
+                }
+
+                if (!File.Exists(path))
+                {
+                    return;
+                }
+
+                if (!path.EndsWith(".asset"))
+                {
+                    return;
+                }
+
+                // Get the File Name of the path
+                string fileName = Path.GetFileName(path);
+
+                // Remove the dataPath part of the path
+                path = path.Substring(Application.dataPath.Length - 6);
+
+                // Not valid path (we remove the file name part of the path to check only the folder)
+                if (!AssetDatabase.IsValidFolder(path.Substring(0, path.Length - fileName.Length)))
+                {
+                    Debug.LogWarning("Not a valid file path!");
+                    return;
+                }
+
+                // Load and open the Gork Graph
+                GorkGraph graph = AssetDatabase.LoadAssetAtPath<GorkGraph>(path);
+                OpenGraph(graph);
+
+                // Update selection
+                Selection.objects = new UnityEngine.Object[] { graph };
+            };
+            #endregion
+
+            // Currently editing text
+            _currentlyEditingText = root.Q<Label>("CurrentlyEditingText");
+            _currentlyEditingDefaultText = _currentlyEditingText.text;
 
             // Open the currently selected graph TODO: Remove this and replace it with a way to save between sessions
             GorkGraph selectedGraph = Selection.activeObject as GorkGraph;
@@ -114,6 +286,33 @@ namespace Gork.Editor
         private void OpenGraph(GorkGraph graph)
         {
             _graphView.OpenGraph(graph);
+
+            _currentlyEditingText.text = $"Currently Editing: {graph.name}";
+
+            // Enable the parent of the graph if the parent is currently disabled
+            if (!_parent.enabledSelf)
+            {
+                _parent.SetEnabled(true);
+
+                // Also remove the no graph text (which is the parent to the "Create New" & "Open Existing" buttons)
+                rootVisualElement.Remove(_noGraphText);
+            }
+        }
+
+        public void DeletedGraph(GorkGraph graph)
+        {
+            if (_graphView.Graph != graph)
+            {
+                return;
+            }
+
+            _currentlyEditingText.text = _currentlyEditingDefaultText;
+
+            _graphView.RemoveAllElements();
+
+            _parent.SetEnabled(false);
+
+            rootVisualElement.Add(_noGraphText);
         }
     }
 }

@@ -55,6 +55,11 @@ namespace Gork.Editor
             // Open search window when node creation is requested
             nodeCreationRequest = context =>
             {
+                if (Graph == null)
+                {
+                    return;
+                }
+
                 SearchWindow.Open(new SearchWindowContext(context.screenMousePosition), _searchWindow);
             };
 
@@ -250,37 +255,7 @@ namespace Gork.Editor
             // Set the graph variable
             Graph = graph;
 
-            // Cache the object which we need to remove
-            IEnumerable<GraphElement> elementsToRemove = graphElements;
-
-            // Disable all GorkGroup elements so they won't wrongly delete their own data
-            foreach (GorkGroup group in elementsToRemove.OfType<GorkGroup>())
-            {
-                group.Enabled = false;
-            }
-
-            // Disconnect all connections on all edges
-            foreach (GorkEdge edge in elementsToRemove.OfType<GorkEdge>())
-            {
-                if (edge.output != null)
-                {
-                    edge.output.Disconnect(edge);
-                }
-
-                if (edge.input != null)
-                {
-                    edge.input.Disconnect(edge);
-                }
-
-                edge.output = null;
-                edge.input = null;
-            }
-
-            // Lasty, actually remove all of the elements
-            foreach (GraphElement element in elementsToRemove)
-            {
-                RemoveElement(element);
-            }
+            RemoveAllElements();
 
             // Create all nodes in the GraphView by looping through all of the nodes in the graph
             Graph.Nodes.ForEach(node =>
@@ -369,6 +344,44 @@ namespace Gork.Editor
 
                 group.Enabled = true;
             });
+        }
+
+        /// <summary>
+        /// Removes all elements on this graph
+        /// </summary>
+        public void RemoveAllElements()
+        {
+            // Cache the object which we need to remove
+            IEnumerable<GraphElement> elementsToRemove = graphElements;
+
+            // Disable all GorkGroup elements so they won't wrongly delete their own data
+            foreach (GorkGroup group in elementsToRemove.OfType<GorkGroup>())
+            {
+                group.Enabled = false;
+            }
+
+            // Disconnect all connections on all edges
+            foreach (GorkEdge edge in elementsToRemove.OfType<GorkEdge>())
+            {
+                if (edge.output != null)
+                {
+                    edge.output.Disconnect(edge);
+                }
+
+                if (edge.input != null)
+                {
+                    edge.input.Disconnect(edge);
+                }
+
+                edge.output = null;
+                edge.input = null;
+            }
+
+            // Lasty, actually remove all of the elements
+            foreach (GraphElement element in elementsToRemove)
+            {
+                RemoveElement(element);
+            }
         }
 
         private GraphViewChange OnGraphViewChanged(GraphViewChange change)

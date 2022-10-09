@@ -1,9 +1,18 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="True">
-    <uie:Toolbar>
-        <uie:ToolbarButton text="Find Asset" display-tooltip-when-elided="true" focusable="false" name="FindAsset" />
-    </uie:Toolbar>
-    <ui:VisualElement name="Panel" style="position: relative; flex-grow: 1;">
-        <Gork.Editor.GorkGraphView focusable="true" style="flex-grow: 1;" />
-        <ui:Label text="Gork Graph" display-tooltip-when-elided="true" style="position: absolute; left: 0; top: 0; right: 0; bottom: auto; opacity: 1; background-color: rgba(0, 0, 0, 0.5); -unity-text-align: upper-center;" />
+    <ui:VisualElement name="Parent" style="flex-grow: 1;">
+        <uie:Toolbar>
+            <uie:ToolbarButton text="Find Asset" display-tooltip-when-elided="true" focusable="false" name="FindAsset" />
+            <uie:ToolbarButton text="Save Copy..." display-tooltip-when-elided="true" focusable="false" name="SaveCopy" style="left: 10px;" />
+        </uie:Toolbar>
+        <ui:VisualElement name="Panel" style="position: relative; flex-grow: 1;">
+            <Gork.Editor.GorkGraphView focusable="true" style="flex-grow: 1;" />
+            <ui:Label text="Not Editing..." display-tooltip-when-elided="true" name="CurrentlyEditingText" style="position: absolute; left: 0; top: 0; right: 0; bottom: auto; opacity: 1; background-color: rgba(0, 0, 0, 0.5); -unity-text-align: upper-center;" />
+        </ui:VisualElement>
     </ui:VisualElement>
+    <ui:Label text="No Gork Graph is being edited!" display-tooltip-when-elided="true" name="NoGraphText" style="flex-grow: 1; position: absolute; left: 0; top: 0; right: 0; bottom: 0; -unity-text-align: middle-center; font-size: 30px; color: rgb(255, 255, 255); -unity-font-style: bold; background-color: rgba(0, 0, 0, 0.5);">
+        <ui:VisualElement name="RightSide" style="position: absolute; left: 50%; right: 0; top: 55%;">
+            <ui:Button text="Create New" display-tooltip-when-elided="true" name="CreateNewButton" focusable="false" style="width: 50%; height: 30px; font-size: 20px; align-items: auto; opacity: 1; position: absolute; left: -60%;" />
+            <ui:Button text="Open Existing" display-tooltip-when-elided="true" name="OpenExistingButton" focusable="false" style="width: 50%; height: 30px; font-size: 20px; left: 10%; position: absolute;" />
+        </ui:VisualElement>
+    </ui:Label>
 </ui:UXML>

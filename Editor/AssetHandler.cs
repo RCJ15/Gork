@@ -11,12 +11,12 @@ using UnityEditor.Callbacks;
 namespace Gork.Editor
 {
     /// <summary>
-    /// Special editor script for Gork that handles the opening of <see cref="GorkGraph"/>.
+    /// Special editor script for Gork that handles the opening and deleting of a <see cref="GorkGraph"/>.
     /// </summary>
-    public static class AssetOpener
+    public class AssetHandler : AssetModificationProcessor
     {
         [OnOpenAsset]
-        private static bool OnOpenAsset(int instanceID, int line)
+        public static bool OnOpenAsset(int instanceID, int line)
         {
             // Load object using instance ID
             string path = AssetDatabase.GetAssetPath(instanceID);
@@ -38,6 +38,18 @@ namespace Gork.Editor
             GorkGraphEditor.Open(obj as GorkGraph);
 
             return true;
+        }
+
+        public static AssetDeleteResult OnWillDeleteAsset(string path, RemoveAssetOptions opt)
+        {
+            GorkGraph graph = AssetDatabase.LoadMainAssetAtPath(path) as GorkGraph;
+
+            if (graph != null && EditorWindow.HasOpenInstances<GorkGraphEditor>())
+            {
+                EditorWindow.GetWindow<GorkGraphEditor>().DeletedGraph(graph);
+            }
+
+            return AssetDeleteResult.DidNotDelete;
         }
     }
 }
