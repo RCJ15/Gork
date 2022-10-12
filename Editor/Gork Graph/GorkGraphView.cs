@@ -24,6 +24,9 @@ namespace Gork.Editor
         public GUID GraphGUID(string assetPath) => AssetDatabase.GUIDFromAssetPath(assetPath);
         private GorkNodeSearchWindow _searchWindow;
         public GorkNodeSearchWindow GorkSearchWindow => _searchWindow;
+
+        private MiniMap miniMap;
+
         private Vector3 _cachedMousePos;
         public Vector3 MousePos => TransformScreenPos(_cachedMousePos);
         public Vector2 TransformScreenPos(Vector2 screenPos) => viewTransform.matrix.inverse.MultiplyPoint(screenPos);
@@ -63,11 +66,38 @@ namespace Gork.Editor
                 SearchWindow.Open(new SearchWindowContext(context.screenMousePosition), _searchWindow);
             };
 
+            #region Create minimap
+            miniMap = new MiniMap()
+            {
+                anchored = true
+            };
+
+            miniMap.SetPosition(new Rect(15, 25, 200, 180));
+
+            Add(miniMap);
+
+            miniMap.visible = false;
+
+            StyleColor backgroundColor = new StyleColor(new Color32(29, 29, 30, 255));
+            StyleColor borderColor = new StyleColor(new Color32(51, 51, 51, 255));
+
+            miniMap.style.backgroundColor = backgroundColor;
+            miniMap.style.borderTopColor = borderColor;
+            miniMap.style.borderRightColor = borderColor;
+            miniMap.style.borderBottomColor = borderColor;
+            miniMap.style.borderLeftColor = borderColor;
+            #endregion
+
             RegisterCallback<ValidateCommandEvent>(OnValidateCommand);
             RegisterCallback<MouseMoveEvent>(OnMouseMoveEvent);
 
             // Subscribe to the graphViewChanged callback
             graphViewChanged += OnGraphViewChanged;
+        }
+
+        public void ToggleMiniMap()
+        {
+            miniMap.visible = !miniMap.visible;
         }
 
         private void OnMouseMoveEvent(MouseMoveEvent evt)

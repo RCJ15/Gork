@@ -5,6 +5,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
 using UnityEditor.UIElements;
+using UnityEditor.Experimental.GraphView;
 
 namespace Gork.Editor
 {
@@ -57,6 +58,8 @@ namespace Gork.Editor
         private GorkGraph _graph;
         private GorkGraphView _graphView;
 
+        private GorkAssetSearchWindow _searchWindow;
+
         // Getting current open file path in the project window using System.Reflection
         private MethodInfo _getFolderPath = typeof(ProjectWindowUtil).GetMethod("GetActiveFolderPath", BindingFlags.Static | BindingFlags.NonPublic);
 
@@ -73,6 +76,16 @@ namespace Gork.Editor
         {
             GorkGraphEditor window = Open();
             window.OpenGraph(graph);
+        }
+
+        private void OnEnable()
+        {
+            _searchWindow = CreateInstance<GorkAssetSearchWindow>();
+        }
+
+        private void OnDisable()
+        {
+            DestroyImmediate(_searchWindow);
         }
 
         public void CreateGUI()
@@ -93,7 +106,7 @@ namespace Gork.Editor
 
             #region Toolbar Buttons
             // Ping object
-            root.Q<ToolbarButton>("FindAsset").clicked += () =>
+            root.Q<ToolbarButton>("HighlightAsset").clicked += () =>
             {
                 if (_graphView.Graph == null)
                 {
@@ -131,7 +144,7 @@ namespace Gork.Editor
                 {
                     return;
                 }
-
+                 
                 // Get the File Name of the path
                 string fileName = Path.GetFileName(path);
 
@@ -157,6 +170,18 @@ namespace Gork.Editor
 
                 // Update selection
                 Selection.objects = new UnityEngine.Object[] { graph };
+            };
+
+            // Open Asset
+            root.Q<ToolbarButton>("OpenAsset").clicked += () =>
+            {
+                OpenExisting();
+            };
+
+            // Toggle Minimap
+            root.Q<ToolbarButton>("ToggleMinimap").clicked += () =>
+            {
+                _graphView.ToggleMiniMap();
             };
             #endregion
 
@@ -214,47 +239,7 @@ namespace Gork.Editor
             // Open Existing Button
             _noGraphText.Q<Button>("OpenExistingButton").clicked += () =>
             {
-                // Get the currently open path in the project window
-                string projectPath = _getFolderPath.Invoke(null, new object[0]).ToString();
-
-                // Open file explorer
-                string path = EditorUtility.OpenFilePanel("Select a Gork Graph to open", projectPath, "asset");
-
-                // Return conditions
-                if (string.IsNullOrEmpty(path))
-                {
-                    return;
-                }
-
-                if (!File.Exists(path))
-                {
-                    return;
-                }
-
-                if (!path.EndsWith(".asset"))
-                {
-                    return;
-                }
-
-                // Get the File Name of the path
-                string fileName = Path.GetFileName(path);
-
-                // Remove the dataPath part of the path
-                path = path.Substring(Application.dataPath.Length - 6);
-
-                // Not valid path (we remove the file name part of the path to check only the folder)
-                if (!AssetDatabase.IsValidFolder(path.Substring(0, path.Length - fileName.Length)))
-                {
-                    Debug.LogWarning("Not a valid file path!");
-                    return;
-                }
-
-                // Load and open the Gork Graph
-                GorkGraph graph = AssetDatabase.LoadAssetAtPath<GorkGraph>(path);
-                OpenGraph(graph);
-
-                // Update selection
-                Selection.objects = new UnityEngine.Object[] { graph };
+                OpenExisting();
             };
             #endregion
 
@@ -281,6 +266,64 @@ namespace Gork.Editor
         private void OnDestroy()
         {
             Undo.undoRedoPerformed -= _graphView.OnUndoRedo;
+        }
+
+        private void OpenExisting()
+        {
+            /*
+            // Get the currently open path in the project window
+            string projectPath = _getFolderPath.Invoke(null, new object[0]).ToString();
+
+            // Open file explorer
+            string path = EditorUtility.OpenFilePanel("Select a Gork Graph to open", projectPath, "asset");
+
+            // Return conditions
+            if (string.IsNullOrEmpty(path))
+            {
+                return;
+            }
+
+            if (!File.Exists(path))
+            {
+                return;
+            }
+
+            if (!path.EndsWith(".asset"))
+            {
+                return;
+            }
+
+            // Get the File Name of the path
+            string fileName = Path.GetFileName(path);
+
+            // Remove the dataPath part of the path
+            path = path.Substring(Application.dataPath.Length - 6);
+
+            // Not valid path (we remove the file name part of the path to check only the folder)
+            if (!AssetDatabase.IsValidFolder(path.Substring(0, path.Length - fileName.Length)))
+            {
+                Debug.LogWarning("Not a valid file path!");
+                return;
+            }
+
+            // Load and open the Gork Graph
+            GorkGraph graph = AssetDatabase.LoadAssetAtPath<GorkGraph>(path);
+            */
+
+            _searchWindow.OnSelectGorkEntry = graph =>
+            {
+                if (graph == null)
+                {
+                    return;
+                }
+
+                OpenGraph(graph);
+
+                // Update selection
+                Selection.objects = new UnityEngine.Object[] { graph };
+            };
+
+            SearchWindow.Open(new SearchWindowContext(GUIUtility.GUIToScreenPoint(Event.current.mousePosition)), _searchWindow);
         }
 
         private void OpenGraph(GorkGraph graph)

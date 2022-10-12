@@ -181,11 +181,11 @@ namespace Gork.Editor
             return _searchTree;
         }
 
-        public bool OnSelectEntry(SearchTreeEntry SearchTreeEntry, SearchWindowContext context)
+        public bool OnSelectEntry(SearchTreeEntry searchTreeEntry, SearchWindowContext context)
         {
-            if (SearchTreeEntry.userData != null)
+            if (searchTreeEntry.userData != null)
             {
-                (SearchTreeEntry.userData as Action<Vector2>)?.Invoke(Position);
+                (searchTreeEntry.userData as Action<Vector2>)?.Invoke(Position);
                 return true;
             }
 

@@ -1,8 +1,10 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="True">
     <ui:VisualElement name="Parent" style="flex-grow: 1;">
         <uie:Toolbar>
-            <uie:ToolbarButton text="Find Asset" display-tooltip-when-elided="true" focusable="false" name="FindAsset" />
+            <uie:ToolbarButton text="Highlight Current Asset" display-tooltip-when-elided="true" focusable="false" name="HighlightAsset" />
             <uie:ToolbarButton text="Save Copy..." display-tooltip-when-elided="true" focusable="false" name="SaveCopy" style="left: 10px;" />
+            <uie:ToolbarButton text="Open Asset" display-tooltip-when-elided="true" focusable="false" name="OpenAsset" style="left: 20px;" />
+            <uie:ToolbarButton text="Toggle Minimap" display-tooltip-when-elided="true" focusable="false" name="ToggleMinimap" style="align-items: flex-end; left: 50%;" />
         </uie:Toolbar>
         <ui:VisualElement name="Panel" style="position: relative; flex-grow: 1;">
             <Gork.Editor.GorkGraphView focusable="true" style="flex-grow: 1;" />
