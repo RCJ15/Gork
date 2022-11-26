@@ -11,7 +11,7 @@ namespace Gork
     /// </summary>
     [GorkNodeInfo("Constant/Constant Bool", GorkColors.BOOL_COLOR)]
     [NoInputPorts]
-    [GorkOutputPort("Value", typeof(bool))]
+    [GorkOutputPort("Value", typeof(bool), false)]
     public class ConstantBoolNode : GorkNode
     {
         public bool Value;
@@ -31,5 +31,10 @@ namespace Gork
             node.RefreshExpandedState();
         }
 #endif
+
+        public override bool BoolCall(int port)
+        {
+            return Value;
+        }
     }
 }

@@ -126,8 +126,7 @@ namespace Gork.Editor
 
                 GorkGraphView graph = _nodeView.GraphView;
                 graph.GorkSearchWindow.Position = graph.TransformScreenPos(position);
-                graph.GorkSearchWindow.EdgePort = _port;
-                graph.nodeCreationRequest.Invoke(context);
+                graph.OpenNodeCreationSearchWindow(context, _port);
             }
 
             public void OnDrop(GraphView graphView, Edge edge)

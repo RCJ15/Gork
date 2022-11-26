@@ -1,3 +1,4 @@
+using System;
 #if UNITY_EDITOR
 using UnityEditor;
 using UnityEditor.Experimental.GraphView;
@@ -12,7 +13,7 @@ namespace Gork
     /// </summary>
     [GorkNodeInfo("Constant/Constant Float", GorkColors.FLOAT_COLOR)]
     [NoInputPorts]
-    [GorkOutputPort("Value", typeof(float))]
+    [GorkOutputPort("Value", typeof(float), false)]
     public class ConstantFloatNode : GorkNode
     {
         public float Value;
@@ -32,5 +33,10 @@ namespace Gork
             node.RefreshExpandedState();
         }
 #endif
+
+        public override float FloatCall(int port)
+        {
+            return Value;
+        }
     }
 }

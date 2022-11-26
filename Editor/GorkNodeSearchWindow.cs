@@ -133,8 +133,29 @@ namespace Gork.Editor
 
                     if (EdgePort != null)
                     {
+                        bool Check(Type thisType, Type type)
+                        {
+                            if (thisType == type)
+                            {
+                                return true;
+                            }
+
+                            if (!GorkConverterAttribute.GorkConvertion.ContainsKey(thisType))
+                            {
+                                return false;
+                            }
+
+                            if (!GorkConverterAttribute.GorkConvertion[thisType].ContainsKey(type))
+                            {
+                                return false;
+                            }
+
+                            return true;
+                        }
+
                         GorkPort otherPort = null;
                         GorkEdge edge = null;
+                        bool checkValue = false;
 
                         // Is input
                         if (EdgePort.direction == Direction.Input)
@@ -143,7 +164,12 @@ namespace Gork.Editor
                             {
                                 otherPort = nodeView.OutputPorts[0];
 
-                                edge = EdgePort.GorkConnectTo(otherPort);
+                                checkValue = Check(EdgePort.portType, otherPort.portType);
+
+                                if (checkValue)
+                                {
+                                    edge = EdgePort.GorkConnectTo(otherPort);
+                                }
                             }
                         }
                         // Is output
@@ -153,11 +179,16 @@ namespace Gork.Editor
                             {
                                 otherPort = nodeView.InputPorts[0];
 
-                                edge = otherPort.GorkConnectTo(EdgePort);
+                                checkValue = Check(otherPort.portType, EdgePort.portType);
+
+                                if (checkValue)
+                                {
+                                    edge = otherPort.GorkConnectTo(EdgePort);
+                                }
                             }
                         }
 
-                        if (otherPort != null)
+                        if (otherPort != null && checkValue)
                         {
                             GraphViewChange change = new GraphViewChange() { edgesToCreate = new List<Edge>() };
 

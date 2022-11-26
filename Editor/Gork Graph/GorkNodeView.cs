@@ -166,7 +166,7 @@ namespace Gork.Editor
         {
             _titleLabel.text = Node.Title;
 
-            int connectionCount = Node.AllConnections.Count;
+            int connectionCount = Node.OutputConnections.Count;
 
             int oldInputPortAmount = InputPorts.Count;
             int oldOutputPortAmount = OutputPorts.Count;
@@ -210,7 +210,7 @@ namespace Gork.Editor
 
                         container.Remove(port);
 
-                        Node.RemoveConnections(i);
+                        Node.RemoveOutputConnections(i);
                         continue;
                     }
 
@@ -240,7 +240,7 @@ namespace Gork.Editor
 
                         if (i < connectionCount)
                         {
-                            foreach (GorkNode.Connection connection in Node.AllConnections[i].Connections)
+                            foreach (GorkNode.Connection connection in Node.OutputConnections[i].Connections)
                             {
                                 GorkNodeView otherNodeView = GraphView.GetNodeView(connection.Node);
 

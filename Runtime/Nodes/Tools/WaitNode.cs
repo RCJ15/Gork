@@ -1,5 +1,7 @@
 #if UNITY_EDITOR
+using System.Collections;
 using UnityEditor;
+using UnityEngine;
 #endif
 
 namespace Gork
@@ -7,7 +9,9 @@ namespace Gork
     /// <summary>
     /// A <see cref="GorkNode"/> that will simply wait for a specified amount of time.
     /// </summary>
-    [GorkNodeInfo("Tools/Wait...")]
+    [GorkNodeInfo("Tools/Wait...", GorkColors.TOOL_COlOR)]
+    [GorkInputPort("Trigger")]
+    [GorkOutputPort("When Done")]
     public class WaitNode : GorkNode
     {
         public float WaitTime = 1;
@@ -47,5 +51,12 @@ namespace Gork
             Title = $"Wait for {WaitTime} second{(WaitTime != 1 ? "s" : "")}";
         }
 #endif
+
+        public override IEnumerator NodeIEnumerator(int port)
+        {
+            yield return new WaitForSeconds(WaitTime);
+
+            CallPort(0);
+        }
     }
 }

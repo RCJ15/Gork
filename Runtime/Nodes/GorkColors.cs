@@ -17,5 +17,7 @@ namespace Gork
 
         public const string DIALOGUE_COLOR = "422626";
         public const string ENTRY_COLOR = "443629";
+        public const string WORMHOLE_COLOR = "30421d";
+        public const string TOOL_COlOR = "4f4f4f";
     }
 }

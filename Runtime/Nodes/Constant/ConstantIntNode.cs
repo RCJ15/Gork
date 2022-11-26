@@ -12,7 +12,7 @@ namespace Gork
     /// </summary>
     [GorkNodeInfo("Constant/Constant Int", GorkColors.INT_COLOR)]
     [NoInputPorts]
-    [GorkOutputPort("Value", typeof(int))]
+    [GorkOutputPort("Value", typeof(int), false)]
     public class ConstantIntNode : GorkNode
     {
         public int Value;
@@ -32,5 +32,10 @@ namespace Gork
             node.RefreshExpandedState();
         }
 #endif
+
+        public override int IntCall(int port)
+        {
+            return Value;
+        }
     }
 }

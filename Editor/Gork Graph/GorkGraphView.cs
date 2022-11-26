@@ -56,15 +56,7 @@ namespace Gork.Editor
             _searchWindow.GraphView = this;
 
             // Open search window when node creation is requested
-            nodeCreationRequest = context =>
-            {
-                if (Graph == null)
-                {
-                    return;
-                }
-
-                SearchWindow.Open(new SearchWindowContext(context.screenMousePosition), _searchWindow);
-            };
+            nodeCreationRequest =context => OpenNodeCreationSearchWindow(context);
 
             #region Create minimap
             miniMap = new MiniMap()
@@ -93,6 +85,18 @@ namespace Gork.Editor
 
             // Subscribe to the graphViewChanged callback
             graphViewChanged += OnGraphViewChanged;
+        }
+
+        public void OpenNodeCreationSearchWindow(NodeCreationContext context, GorkPort port = null)
+        {
+            if (Graph == null)
+            {
+                return;
+            }
+
+            _searchWindow.EdgePort = port;
+
+            SearchWindow.Open(new SearchWindowContext(context.screenMousePosition), _searchWindow);
         }
 
         public void ToggleMiniMap()
@@ -258,10 +262,7 @@ namespace Gork.Editor
             }
 
             graphViewChanged.Invoke(change);
-
             */
-
-            Debug.Log("On undo Redo");
         }
 
         /// <summary>
@@ -305,7 +306,7 @@ namespace Gork.Editor
             Graph.Nodes.ForEach(node =>
             {
                 // Return if the connections are (somehow) null
-                if (node.AllConnections == null)
+                if (node.OutputConnections == null)
                 {
                     return;
                 }
@@ -314,7 +315,7 @@ namespace Gork.Editor
                 GorkNodeView parentNodeView = GetNodeView(node);
 
                 // Create connections for the node by looping through all connections on the node
-                int portLength = node.AllConnections.Count;
+                int portLength = node.OutputConnections.Count;
 
                 for (int portIndex = 0; portIndex < portLength; portIndex++)
                 {
@@ -326,7 +327,7 @@ namespace Gork.Editor
                     // Get the parent port
                     GorkPort parentPort = parentNodeView.OutputPorts[portIndex];
 
-                    var port = node.AllConnections[portIndex];
+                    var port = node.OutputConnections[portIndex];
                     int connectionLength = port.Connections.Count;
 
                     // Loop through the connections on the port
@@ -745,7 +746,7 @@ namespace Gork.Editor
                 NodeCreationContext context = new NodeCreationContext() { screenMousePosition = guiMousePos };
 
                 _searchWindow.Position = graphMousePos;
-                nodeCreationRequest.Invoke(context);
+                OpenNodeCreationSearchWindow(context);
             });
 
             // Add option to create a group
@@ -795,9 +796,12 @@ namespace Gork.Editor
 
                 if (thisType != type)
                 {
-                    MethodInfo method = nodeAdapter.GetTypeAdapter(thisType, type);
+                    if (!GorkConverterAttribute.GorkConvertion.ContainsKey(thisType))
+                    {
+                        continue;
+                    }
 
-                    if (method == null)
+                    if (!GorkConverterAttribute.GorkConvertion[thisType].ContainsKey(type))
                     {
                         continue;
                     }

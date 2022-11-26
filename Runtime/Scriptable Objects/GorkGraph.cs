@@ -54,6 +54,12 @@ namespace Gork
             {
                 foreach (GorkNode node in group.Nodes)
                 {
+                    // Ignore if any of the 2 values are null
+                    if (node == null || group == null)
+                    {
+                        continue;
+                    }
+
                     GetNodeGroup[node] = group;
 
                     if (NodesInGroups.Contains(node))
@@ -104,29 +110,39 @@ namespace Gork
         public void AddConnection(GorkNode parent, int parentPort, GorkNode child, int childPort)
         {
             // Get the list
-            List<GorkNode.Connection> list = parent.GetConnections(parentPort);
+            List<GorkNode.Connection> parentList = parent.GetOutputConnections(parentPort);
+            List<GorkNode.Connection> childList = child.GetInputConnections(childPort);
 
 #if UNITY_EDITOR
+            Undo.RecordObject(child, $"Added connection to \"{child.name}\"");
             Undo.RecordObject(parent, $"Added connection to \"{parent.name}\"");
 #endif
             // Add the connection to the list
-            list.Add(new GorkNode.Connection(childPort, child));
+            parentList.Add(new GorkNode.Connection(childPort, child));
+            childList.Add(new GorkNode.Connection(parentPort, parent));
         }
 
         public void RemoveConnection(GorkNode parent, int parentPort, GorkNode child, int childPort)
         {
             // Get the list
-            List<GorkNode.Connection> list = parent.GetConnections(parentPort);
+            List<GorkNode.Connection> parentList = parent.GetOutputConnections(parentPort);
+            List<GorkNode.Connection> childList = child.GetInputConnections(childPort);
 
 #if UNITY_EDITOR
+            if (child != null)
+            {
+                Undo.RecordObject(child, $"Removed connection from \"{child.name}\"");
+            }
+
             if (parent != null)
             {
                 Undo.RecordObject(parent, $"Removed connection from \"{parent.name}\"");
             }
 #endif
 
-            // Remove the connection from the list
-            list.Remove(new GorkNode.Connection(childPort, child));
+            // Remove the connections from the lists
+            parentList.Remove(new GorkNode.Connection(childPort, child));
+            childList.Remove(new GorkNode.Connection(parentPort, parent));
         }
     }
 }

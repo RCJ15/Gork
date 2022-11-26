@@ -11,7 +11,7 @@ namespace Gork
     /// </summary>
     [GorkNodeInfo("Constant/Constant String", GorkColors.STRING_COLOR)]
     [NoInputPorts]
-    [GorkOutputPort("Value", typeof(string))]
+    [GorkOutputPort("Value", typeof(string), false)]
     public class ConstantStringNode : GorkNode
     {
         public string Value = "Text";
@@ -31,5 +31,10 @@ namespace Gork
             node.RefreshExpandedState();
         }
 #endif
+
+        public override string StringCall(int port)
+        {
+            return Value;
+        }
     }
 }
