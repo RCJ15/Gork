@@ -8,7 +8,7 @@ namespace Gork
     /// Simply just a collection of a bunch of constant hexadecimal color strings for <see cref="GorkNode"/>. <para/>
     /// You probably won't need to use this script...
     /// </summary>
-    public class GorkColors : MonoBehaviour
+    public class GorkColors
     {
         public const string BOOL_COLOR = "264526";
         public const string FLOAT_COLOR = "243E3E";

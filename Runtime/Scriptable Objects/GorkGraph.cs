@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -18,11 +19,89 @@ namespace Gork
         ISerializationCallbackReceiver
 #endif
     {
-        public List<GorkNode> Nodes = new List<GorkNode>();
+        [SerializeField] private List<GorkNode> nodes = new List<GorkNode>();
+        public List<GorkNode> Nodes => nodes;
+
+        public delegate void OnNodeCalledEvent(GorkNode node, int portIndex);
+        public OnNodeCalledEvent OnNodeCalled;
+
+        public delegate void OnGraphStartedEvent();
+        public OnGraphStartedEvent OnGraphStarted;
+
+        public delegate void OnGraphStopEvent();
+        public OnGraphStopEvent OnGraphStop;
+
+        #region Gork Node Dictionary
+        private Dictionary<Type, List<GorkNode>> _cachedGorkNodeDictionary = null;
+
+        public Dictionary<Type, List<GorkNode>> GorkNodeDicitonary
+        {
+            get
+            {
+                if (_cachedGorkNodeDictionary != null)
+                {
+                    return _cachedGorkNodeDictionary;
+                }
+
+                // Dicitonary is null so fill it
+                _cachedGorkNodeDictionary = new Dictionary<Type, List<GorkNode>>();
+
+                // Loop through every node and determine what type it is and add it to the dicitonary
+                foreach (GorkNode node in nodes)
+                {
+                    Type type = node.GetType();
+
+                    if (!_cachedGorkNodeDictionary.ContainsKey(type))
+                    {
+                        _cachedGorkNodeDictionary[type] = new List<GorkNode>();
+                    }
+
+                    _cachedGorkNodeDictionary[type].Add(node);
+                }
+
+                return _cachedGorkNodeDictionary;
+            }
+        }
+
+        private readonly Dictionary<Type, object> _cachedCastedGorkNodes = new Dictionary<Type, object>();
+
+        public List<T> GetAllNodesOfType<T>() where T : GorkNode
+        {
+            Type type = typeof(T);
+
+            if (_cachedCastedGorkNodes.ContainsKey(type))
+            {
+                return (List<T>)_cachedCastedGorkNodes[type];
+            }
+
+            List<GorkNode> nodes = GetAllNodesOfType(type);
+
+            if (nodes == null)
+            {
+                return null;
+            }
+
+            List<T> list = nodes.Cast<T>().ToList();
+
+            _cachedCastedGorkNodes.Add(type, list);
+
+            return list;
+        }
+        public List<GorkNode> GetAllNodesOfType(Type nodeType)
+        {
+            if (GorkNodeDicitonary.ContainsKey(nodeType))
+            {
+                return GorkNodeDicitonary[nodeType];
+            }
+
+            return null;
+        }
+        #endregion
 
         #region Group Data
 #if UNITY_EDITOR
-        public List<GroupData> GorkGroups = new List<GroupData>();
+        [SerializeField] private List<GroupData> gorkGroups = new List<GroupData>();
+        public List<GroupData> GorkGroups => gorkGroups;
 
         [Serializable]
         public class GroupData
@@ -50,7 +129,7 @@ namespace Gork
 
         public void OnAfterDeserialize()
         {
-            foreach (GroupData group in GorkGroups)
+            foreach (GroupData group in gorkGroups)
             {
                 foreach (GorkNode node in group.Nodes)
                 {
@@ -96,7 +175,7 @@ namespace Gork
 #endif
 
             // Add node to list
-            Nodes.Add(node);
+            nodes.Add(node);
 
             return node;
         }
@@ -104,7 +183,7 @@ namespace Gork
         public void DeleteNode(GorkNode node)
         {
             // Remove node from list
-            Nodes.Remove(node);
+            nodes.Remove(node);
         }
 
         public void AddConnection(GorkNode parent, int parentPort, GorkNode child, int childPort)

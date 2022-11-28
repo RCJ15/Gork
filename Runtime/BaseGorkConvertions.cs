@@ -10,7 +10,7 @@ namespace Gork
     /// See: <see cref="GorkConverterAttribute"/>.
     /// </summary>
     [GorkConverter]
-    public class BaseGorkConvertions : MonoBehaviour
+    public class BaseGorkConvertions
     {
         /// <summary>
         /// Float to Int convertion.

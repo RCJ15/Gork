@@ -15,6 +15,7 @@ namespace Gork
     /// A <see cref="GorkNode"/> that will start a mulit choice option list.
     /// </summary>
     [GorkNodeInfo("Dialogue/Multi Choice Dialogue", GorkColors.DIALOGUE_COLOR)]
+    [GorkInputPort("Trigger")]
     public class MultiChoiceDialogueNode : GorkNode
     {
         [TextArea(1, 5)]

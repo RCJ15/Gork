@@ -8,6 +8,8 @@ namespace Gork
     /// A <see cref="GorkNode"/> that will start some dialogue.
     /// </summary>
     [GorkNodeInfo("Dialogue/Dialogue", GorkColors.DIALOGUE_COLOR)]
+    [GorkInputPort("Trigger")]
+    [GorkOutputPort("When Done")]
     public class DialogueNode : GorkNode
     {
         [TextArea(2, 5)]

@@ -52,11 +52,17 @@ namespace Gork
         }
 #endif
 
+        public override void NodeCall(int port)
+        {
+            // Do nothing
+            //base.NodeCall(port);
+        }
+
         public override IEnumerator NodeIEnumerator(int port)
         {
             yield return new WaitForSeconds(WaitTime);
 
-            CallPort(0);
+            base.NodeCall(port);
         }
     }
 }

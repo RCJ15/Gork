@@ -22,7 +22,7 @@ namespace Gork.Editor
         {
             using (new EditorGUI.DisabledScope(true))
             {
-                EditorGUILayout.PropertyField(serializedObject.FindProperty("Nodes"));
+                EditorGUILayout.PropertyField(serializedObject.FindProperty("nodes"));
             }
 
             EditorGUILayout.Space();

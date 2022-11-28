@@ -327,7 +327,13 @@ namespace Gork
 
         public virtual void CallPort(int port)
         {
+            List<Connection> connections = GetOutputConnections(port);
 
+            // Call nodes
+            foreach (Connection connection in connections)
+            {
+                Graph.OnNodeCalled(connection.Node, connection.PortIndex);
+            }
         }
 
         public virtual T GetValueFromPort<T>(int port)
@@ -369,7 +375,16 @@ namespace Gork
 
             List<Connection> connections = GetInputConnections(port);
 
-            if (connections.Count <= 1)
+            int connectionCount = connections.Count;
+
+            if (connectionCount <= 0)
+            {
+#if UNITY_EDITOR
+                Debug.LogWarning($"No connection was connected to Input Port {port + 1} on {name}!");
+#endif
+                return default;
+            }
+            else if (connectionCount <= 1)
             {
                 return GetValueFromConnection(connections[0]);
             }
@@ -382,13 +397,11 @@ namespace Gork
             NodeCall(port);
 
             yield return null;
-
-            CallPort(0);
         }
 
         public virtual void NodeCall(int port)
         {
-
+            CallPort(0);
         }
 
         private static readonly Type FloatType = typeof(float);
@@ -619,12 +632,12 @@ namespace Gork
                     // Check first for if we have the NoOutput/NoInput ports attributes
                     // Leave the list empty if we have one of these attributes attached
 
-                    void PortCheck(bool isOutputPorts)
+                    void PortCheck<T>(bool isOutputPorts, IEnumerable<T> portEnumerable) where T : GorkPortAttribute
                     {
                         List<Type> list = isOutputPorts ? outputPortTypes : inputPortTypes;
                         int count = 0;
 
-                        foreach (GorkPortAttribute port in isOutputPorts ? type.GetCustomAttributes<GorkInputPortAttribute>() : type.GetCustomAttributes<GorkInputPortAttribute>())
+                        foreach (T port in portEnumerable)
                         {
                             count++;
 
@@ -639,12 +652,12 @@ namespace Gork
 
                     if (type.GetCustomAttribute<NoInputPortsAttribute>() == null)
                     {
-                        PortCheck(false);
+                        PortCheck(false, type.GetCustomAttributes<GorkInputPortAttribute>());
                     }
 
                     if (type.GetCustomAttribute<NoOutputPortsAttribute>() == null)
                     {
-                        PortCheck(true);
+                        PortCheck(true, type.GetCustomAttributes<GorkOutputPortAttribute>());
                     }
 
                     StaticInputPortTypes.Add(type, inputPortTypes);
