@@ -11,7 +11,7 @@ namespace Gork
     /// <summary>
     /// 
     /// </summary>
-    [GorkNodeInfo("Operations/Number Comparison", GorkColors.FLOAT_COLOR)]
+    [GorkNodeInfo("Operations/Number Comparison", GorkColors.FLOAT_COLOR, -1)]
     [GorkInputPort("Number 1", typeof(float), false)]
     [GorkInputPort("Number 2", typeof(float), false)]
     [GorkOutputPort("Result", typeof(bool))]

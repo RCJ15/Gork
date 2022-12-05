@@ -3,7 +3,7 @@ namespace Gork
     /// <summary>
     /// Will stop all threads in a <see cref="GorkGraph"/>.
     /// </summary>
-    [GorkNodeInfo("Entries & Exits/Stop", GorkColors.ENTRY_COLOR)]
+    [GorkNodeInfo("Entries & Exits/Stop", GorkColors.ENTRY_COLOR, 1)]
     [NoOutputPorts]
     [GorkInputPort("Trigger")]
     public class StopNode : GorkNode

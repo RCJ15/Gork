@@ -9,7 +9,7 @@ namespace Gork
     /// <summary>
     /// A <see cref="GorkNode"/> that will simply wait for a specified amount of time.
     /// </summary>
-    [GorkNodeInfo("Tools/Wait...", GorkColors.TOOL_COlOR)]
+    [GorkNodeInfo("Tools/Wait...", GorkColors.TOOL_COlOR, 10)]
     [GorkInputPort("Trigger")]
     [GorkOutputPort("When Done")]
     public class WaitNode : GorkNode

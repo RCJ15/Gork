@@ -10,7 +10,7 @@ namespace Gork
     /// <summary>
     /// Subtracts a number with another
     /// </summary>
-    [GorkNodeInfo("Operations/Subtract Number", GorkColors.FLOAT_COLOR)]
+    [GorkNodeInfo("Operations/Subtract Number", GorkColors.FLOAT_COLOR, 1)]
     [GorkInputPort("Value", typeof(float), false)]
     [GorkInputPort("Adder", typeof(float), false)]
     [GorkOutputPort("Result", typeof(float), false)]

@@ -9,7 +9,7 @@ namespace Gork
     /// <summary>
     /// A node that will receive a signal from a <see cref="WormholeEntryNode"/> with the same key. Use this to fix spaghetti connections.
     /// </summary>
-    [GorkNodeInfo("Entries & Exits/Wormhole Exit", GorkColors.WORMHOLE_COLOR)]
+    [GorkNodeInfo("Entries & Exits/Wormhole Exit", GorkColors.WORMHOLE_COLOR, 11)]
     [NoInputPorts]
     [GorkOutputPort("Signal")]
     public class WormholeExitNode : GorkNode

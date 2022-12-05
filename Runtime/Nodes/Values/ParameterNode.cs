@@ -12,9 +12,9 @@ namespace Gork
     /// 
     /// </summary>
     [GorkNodeInfo("Parameter/Float Parameter", GorkColors.FLOAT_COLOR, 0)]
-    [GorkNodeInfo("Parameter/Int Parameter", GorkColors.INT_COLOR, 0)]
-    [GorkNodeInfo("Parameter/Bool Parameter", GorkColors.BOOL_COLOR, 0)]
-    [GorkNodeInfo("Parameter/String Parameter", GorkColors.STRING_COLOR, 0)]
+    [GorkNodeInfo("Parameter/Int Parameter", GorkColors.INT_COLOR, 1)]
+    [GorkNodeInfo("Parameter/Bool Parameter", GorkColors.BOOL_COLOR, 2)]
+    [GorkNodeInfo("Parameter/String Parameter", GorkColors.STRING_COLOR, 3)]
     [NoInputPorts]
     public class ParameterNode : GorkNode
     {

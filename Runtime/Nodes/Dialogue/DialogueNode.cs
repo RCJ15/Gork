@@ -7,7 +7,7 @@ namespace Gork
     /// <summary>
     /// A <see cref="GorkNode"/> that will start some dialogue.
     /// </summary>
-    [GorkNodeInfo("Dialogue/Dialogue", GorkColors.DIALOGUE_COLOR)]
+    [GorkNodeInfo("Dialogue/Dialogue", GorkColors.DIALOGUE_COLOR, 0)]
     [GorkInputPort("Trigger")]
     [GorkOutputPort("When Done")]
     public class DialogueNode : GorkNode

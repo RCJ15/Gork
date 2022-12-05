@@ -7,7 +7,7 @@ namespace Gork
     /// <summary>
     /// 
     /// </summary>
-    [GorkNodeInfo("Logic/If", GorkColors.TOOL_COlOR)]
+    [GorkNodeInfo("Logic/If", GorkColors.TOOL_COlOR, 0)]
     [GorkInputPort("Trigger")]
     [GorkInputPort("Statement", typeof(bool), false)]
     [GorkOutputPort("True")]

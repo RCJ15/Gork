@@ -53,11 +53,18 @@ namespace Gork.Editor
                 int split1Length = splits1.Length;
                 int split2Length = splits2.Length;
 
+                int compareValue = a.Order.CompareTo(b.Order);
+
                 for (int i = 0; i < split1Length; i++)
                 {
                     if (i >= splits2.Length)
                     {
-                        return 1;
+                        return compareValue;
+                    }
+
+                    if (i == split1Length - 1)
+                    {
+                        return compareValue;
                     }
 
                     int value = splits1[i].CompareTo(splits2[i]);
@@ -74,7 +81,7 @@ namespace Gork.Editor
                     }
                 }
 
-                return 0;
+                return compareValue;
             });
 
             List<string> groups = new List<string>();

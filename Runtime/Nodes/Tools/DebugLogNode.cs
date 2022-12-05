@@ -8,7 +8,7 @@ namespace Gork
     /// <summary>
     /// A <see cref="GorkNode"/> that will simply print out a message in the console using <see cref="Debug.Log(object)"/>.
     /// </summary>
-    [GorkNodeInfo("Tools/Debug Log", GorkColors.TOOL_COlOR)]
+    [GorkNodeInfo("Tools/Debug Log", GorkColors.TOOL_COlOR, 0)]
     [GorkInputPort("Trigger")]
     [GorkInputPort("Data", typeof(object), false)]
     [NoOutputPorts]

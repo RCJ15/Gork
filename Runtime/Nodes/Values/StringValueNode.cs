@@ -9,7 +9,7 @@ namespace Gork
     /// <summary>
     /// Gives out either a constant or parameter <see cref="string"/> value.
     /// </summary>
-    [GorkNodeInfo("Values/String Value", GorkColors.STRING_COLOR)]
+    [GorkNodeInfo("Values/String Value", GorkColors.STRING_COLOR, 3)]
     [NoInputPorts]
     [GorkOutputPort("Value", typeof(string), false)]
     public class StringValueNode : GorkNode

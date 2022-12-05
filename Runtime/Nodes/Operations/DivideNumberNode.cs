@@ -10,7 +10,7 @@ namespace Gork
     /// <summary>
     /// Divides a number with another
     /// </summary>
-    [GorkNodeInfo("Operations/Divide Number", GorkColors.FLOAT_COLOR)]
+    [GorkNodeInfo("Operations/Divide Number", GorkColors.FLOAT_COLOR, 3)]
     [GorkInputPort("Numerator", typeof(float), false)]
     [GorkInputPort("Denumerator", typeof(float), false)]
     [GorkOutputPort("Result", typeof(float), false)]

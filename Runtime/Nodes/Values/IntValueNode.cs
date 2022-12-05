@@ -10,7 +10,7 @@ namespace Gork
     /// <summary>
     /// Gives out either a constant or parameter <see cref="int"/> value.
     /// </summary>
-    [GorkNodeInfo("Values/Int Value", GorkColors.INT_COLOR)]
+    [GorkNodeInfo("Values/Int Value", GorkColors.INT_COLOR, 1)]
     [NoInputPorts]
     [GorkOutputPort("Value", typeof(int), false)]
     public class IntValueNode : GorkNode

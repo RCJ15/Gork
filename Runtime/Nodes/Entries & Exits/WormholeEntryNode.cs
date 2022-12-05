@@ -10,7 +10,7 @@ namespace Gork
     /// <summary>
     /// A node that will transport it's signal to a <see cref="WormholeExitNode"/> with the same key. Use this to fix spaghetti connections or make Functions that will be called multiple times.
     /// </summary>
-    [GorkNodeInfo("Entries & Exits/Wormhole Entry", GorkColors.WORMHOLE_COLOR)]
+    [GorkNodeInfo("Entries & Exits/Wormhole Entry", GorkColors.WORMHOLE_COLOR, 10)]
     [GorkInputPort("Signal")]
     [NoOutputPorts]
     public class WormholeEntryNode : GorkNode

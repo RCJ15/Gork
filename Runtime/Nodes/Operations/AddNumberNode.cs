@@ -11,7 +11,7 @@ namespace Gork
     /// <summary>
     /// Adds a number with another
     /// </summary>
-    [GorkNodeInfo("Operations/Add Number", GorkColors.FLOAT_COLOR)]
+    [GorkNodeInfo("Operations/Add Number", GorkColors.FLOAT_COLOR, 0)]
     [GorkInputPort("Value", typeof(float), false)]
     [GorkInputPort("Adder", typeof(float), false)]
     [GorkOutputPort("Result", typeof(float), false)]

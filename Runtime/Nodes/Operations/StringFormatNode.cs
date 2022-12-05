@@ -11,7 +11,7 @@ namespace Gork
     /// <summary>
     /// 
     /// </summary>
-    [GorkNodeInfo("Operations/String Format", GorkColors.STRING_COLOR)]
+    [GorkNodeInfo("Operations/String Format", GorkColors.STRING_COLOR, 100)]
     [GorkInputPort("Input", typeof(string), false)]
     [GorkOutputPort("Result", typeof(string), false)]
     public class StringFormatNode : GorkNode

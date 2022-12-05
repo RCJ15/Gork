@@ -9,7 +9,7 @@ namespace Gork
     /// <summary>
     /// Gives out either a constant or parameter <see cref="bool"/> value.
     /// </summary>
-    [GorkNodeInfo("Values/Bool Value", GorkColors.BOOL_COLOR)]
+    [GorkNodeInfo("Values/Bool Value", GorkColors.BOOL_COLOR, 2)]
     [NoInputPorts]
     [GorkOutputPort("Value", typeof(bool), false)]
     public class BoolValueNode : GorkNode

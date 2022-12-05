@@ -10,7 +10,7 @@ namespace Gork
     /// <summary>
     /// Multiplies a number with another
     /// </summary>
-    [GorkNodeInfo("Operations/Multiply Number", GorkColors.FLOAT_COLOR)]
+    [GorkNodeInfo("Operations/Multiply Number", GorkColors.FLOAT_COLOR, 2)]
     [GorkInputPort("Value", typeof(float), false)]
     [GorkInputPort("Multiplier", typeof(float), false)]
     [GorkOutputPort("Result", typeof(float), false)]
