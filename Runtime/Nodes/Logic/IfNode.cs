@@ -8,8 +8,8 @@ namespace Gork
     /// 
     /// </summary>
     [GorkNodeInfo("Logic/If", GorkColors.TOOL_COlOR)]
-    [GorkInputPort("Statement", typeof(bool), false)]
     [GorkInputPort("Trigger")]
+    [GorkInputPort("Statement", typeof(bool), false)]
     [GorkOutputPort("True")]
     [GorkOutputPort("False")]
     public class IfNode : GorkNode

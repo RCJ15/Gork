@@ -21,6 +21,7 @@ namespace Gork
 #if UNITY_EDITOR
         [DontSaveInGorkGraph] [HideInInspector] public string GUID;
         [DontSaveInGorkGraph] [HideInInspector] public Vector2 Position; // The position in the graph
+        [DontSaveInGorkGraph] [HideInInspector] public int AttributeID = 0;
 
         private string _title;
         /// <summary>
@@ -135,6 +136,16 @@ namespace Gork
             InputPorts.RemoveAt(index);
         }
 
+        protected void DeleteInputPortRange(int index, int count)
+        {
+            if (index < 0 || index > InputPorts.Count - 1)
+            {
+                return;
+            }
+
+            InputPorts.RemoveRange(index, count);
+        }
+
         protected void SetOutputPort(int index, string name)
         {
             SetOutputPort(index, port =>
@@ -171,10 +182,21 @@ namespace Gork
 
             OutputPorts.RemoveAt(index);
         }
+
+        protected void DeleteOutputPortRange(int index, int count)
+        {
+            if (index < 0 || index > OutputPorts.Count - 1)
+            {
+                return;
+            }
+
+            OutputPorts.RemoveRange(index, count);
+        }
         #endregion
 
         #region UpdateNodeView()
-        [DontSaveInGorkGraph] public Action UpdateNodeViewCallback;
+        public delegate void UpdateNodeViewEvent();
+        [DontSaveInGorkGraph] public UpdateNodeViewEvent UpdateNodeViewCallback;
         protected virtual void UpdateNodeView() => UpdateNodeViewCallback?.Invoke();
         #endregion
 
@@ -324,7 +346,37 @@ namespace Gork
             serializedObject.UpdateIfRequiredOrScript();
         }
 #endif
+        #region Get Parameter
+        /// <summary>
+        /// Returns the parameter with the type of <paramref name="type"/> and with the given <paramref name="name"/>.
+        /// </summary>
+        protected object GetParameter(string name, Type type) =>  Graph.GetParameter(name, type);
+        /// <summary>
+        /// Returns the parameter with the type of <paramref name="T"/> and with the given <paramref name="name"/>.
+        /// </summary>
+        protected T GetParameter<T>(string name) => Graph.GetParameter<T>(name);
 
+        /// <summary>
+        /// Returns the <see cref="float"/> parameter with the given <paramref name="name"/>.
+        /// </summary>
+        protected float GetFloatParameter(string name) => Graph.GetFloat(name);
+        /// <summary>
+        /// Returns the <see cref="int"/> parameter with the given <paramref name="name"/>.
+        /// </summary>
+        protected int GetIntParameter(string name) => Graph.GetInt(name);
+        /// <summary>
+        /// Returns the <see cref="bool"/> parameter with the given <paramref name="name"/>.
+        /// </summary>
+        protected bool GetBoolParameter(string name) => Graph.GetBool(name);
+        /// <summary>
+        /// Returns the <see cref="string"/> parameter with the given <paramref name="name"/>.
+        /// </summary>
+        protected string GetStringParameter(string name) => Graph.GetString(name);
+        #endregion
+
+        /// <summary>
+        /// Calls a <see cref="GorkNode"/> that is connected to an output port with the given <paramref name="port"/> index.
+        /// </summary>
         public virtual void CallPort(int port)
         {
             List<Connection> connections = GetOutputConnections(port);
@@ -336,6 +388,11 @@ namespace Gork
             }
         }
 
+        /// <summary>
+        /// Returns a value of type <typeparamref name="T"/> from the input port with the given <paramref name="port"/> index. <para/>
+        /// Will correctly convert different values with different types using a <see cref="GorkConverterAttribute"/>. <para/>
+        /// Getting a <see cref="string"/> or <see cref="object"/> value will also NEVER fail as anything can be converted to <see cref="string"/> via <see cref="object.ToString"/> and also because everything in C# can be of type <see cref="object"/>.
+        /// </summary>
         public virtual T GetValueFromPort<T>(int port)
         {
             // Local function that will get the value from a Connection
@@ -343,7 +400,7 @@ namespace Gork
             T GetValueFromConnection(Connection connection)
             {
                 GorkNode node = connection.Node;
-                Type parameterType = node.OutputPortTypes[connection.PortIndex];
+                Type parameterType = node.OutputPortTypes[Mathf.Clamp(connection.PortIndex, 0, node.OutputPortTypes.Count - 1)];
                 Type returnType = typeof(T);
 
                 // Parameter & return type is the same?
@@ -351,6 +408,20 @@ namespace Gork
                 {
                     // Just return the value, no GorkConverter is needed
                     return (T)node.ValueCall(connection.PortIndex, returnType);
+                }
+
+                // Is generic object type?
+                if (returnType == typeof(object))
+                {
+                    // Notice how we use the parameter type and not the return type
+                    return (T)node.ValueCall(connection.PortIndex, parameterType);
+                }
+
+                // Is returning a string?
+                if (returnType == typeof(string))
+                {
+                    // Use ToString() because ANYTHING can be string
+                    return (T)(node.ValueCall(connection.PortIndex, parameterType).ToString() as object);
                 }
 
                 // Both types are different!
@@ -373,10 +444,23 @@ namespace Gork
                 return (T)conversionMethod.Invoke(null, new object[] { value });
             }
 
+            // Return default value if this input port type is a signal
+            if (InputPortTypes[port].IsSignal())
+            {
+#if UNITY_EDITOR
+                Debug.LogWarning($"Input Port {port + 1} is of type Signal! This means that it cannot get values!");
+#endif
+                return default;
+            }
+
+
+            // Get connections
             List<Connection> connections = GetInputConnections(port);
-
+            
+            // Check connection amount
             int connectionCount = connections.Count;
-
+            
+            // Nothing is connected
             if (connectionCount <= 0)
             {
 #if UNITY_EDITOR
@@ -384,14 +468,25 @@ namespace Gork
 #endif
                 return default;
             }
+            // Only 1 thing is connected
             else if (connectionCount <= 1)
             {
-                return GetValueFromConnection(connections[0]);
+                T value = GetValueFromConnection(connections[0]);
+                return value;
             }
+            // TODO: Add behaviour for multiple connections
+            // else 
+            // {
+            // 
+            // }
 
+            // This is temporary
             return default;
         }
 
+        /// <summary>
+        /// Override this method to add custom coroutine functionality to your node.
+        /// </summary>
         public virtual IEnumerator NodeIEnumerator(int port)
         {
             NodeCall(port);
@@ -399,15 +494,14 @@ namespace Gork
             yield return null;
         }
 
+        /// <summary>
+        /// Override this if you want to do some regular node behaviour. <para/>
+        /// For delayed node behaviour, see: <see cref="NodeIEnumerator(int)"/>.
+        /// </summary>
         public virtual void NodeCall(int port)
         {
             CallPort(0);
         }
-
-        private static readonly Type FloatType = typeof(float);
-        private static readonly Type IntType = typeof(int);
-        private static readonly Type BoolType = typeof(bool);
-        private static readonly Type StringType = typeof(string);
 
         /// <summary>
         /// This method is called by another <see cref="GorkNode"/> when it needs to obtain a certain value from this <see cref="GorkNode"/> using <see cref="GetValueFromPort{T}(int)"/>. <para/>
@@ -417,19 +511,19 @@ namespace Gork
         /// <param name="type">The type of value that is going to be given.</param>
         public virtual object ValueCall(int port, Type type)
         {
-            if (type == FloatType)
+            if (type == typeof(float))
             {
                 return FloatCall(port);
             }
-            else if (type == IntType)
+            else if (type == typeof(int))
             {
                 return IntCall(port);
             }
-            else if (type == BoolType)
+            else if (type == typeof(bool))
             {
                 return BoolCall(port);
             }
-            else if (type == StringType)
+            else if (type == typeof(string))
             {
                 return StringCall(port);
             }
@@ -437,21 +531,37 @@ namespace Gork
             return default;
         }
 
+        /// <summary>
+        /// Override this to add custom behaviour for when this node should return a <see cref="float"/> value. <para/>
+        /// If you want to return a custom data type then override <see cref="ValueCall(int, Type)"/>.
+        /// </summary>
         public virtual float FloatCall(int port)
         {
             return default;
         }
 
+        /// <summary>
+        /// Override this to add custom behaviour for when this node should return a <see cref="int"/> value. <para/>
+        /// If you want to return a custom data type then override <see cref="ValueCall(int, Type)"/>.
+        /// </summary>
         public virtual int IntCall(int port)
         {
             return default;
         }
 
+        /// <summary>
+        /// Override this to add custom behaviour for when this node should return a <see cref="bool"/> value. <para/>
+        /// If you want to return a custom data type then override <see cref="ValueCall(int, Type)"/>.
+        /// </summary>
         public virtual bool BoolCall(int port)
         {
             return default;
         }
 
+        /// <summary>
+        /// Override this to add custom behaviour for when this node should return a <see cref="string"/> value. <para/>
+        /// If you want to return a custom data type then override <see cref="ValueCall(int, Type)"/>.
+        /// </summary>
         public virtual string StringCall(int port)
         {
             return default;
@@ -461,18 +571,31 @@ namespace Gork
         [DontSaveInGorkGraph] [HideInInspector] public List<ConnectPort> OutputConnections = new List<ConnectPort>();
         [DontSaveInGorkGraph] [HideInInspector] public List<ConnectPort> InputConnections = new List<ConnectPort>();
 
+        /// <summary>
+        /// Returns a list of connections from the input port at the given <paramref name="index"/>. <para/>
+        /// If the index is out of range, then this method will automatically expand the list and return an empty connection list.
+        /// </summary>
         public List<Connection> GetInputConnections(int index)
         {
             return GetConnections(ref InputConnections, index);
         }
 
+        /// <summary>
+        /// Returns a list of connections from the output port at the given <paramref name="index"/>. <para/>
+        /// If the index is out of range, then this method will automatically expand the list and return an empty connection list.
+        /// </summary>
         public List<Connection> GetOutputConnections(int index)
         {
             return GetConnections(ref OutputConnections, index);
         }
 
+        /// <summary>
+        /// Returns a list of connections from the <paramref name="list"/> at the <paramref name="index"/> port. <para/>
+        /// If the index is out of range, then this method will automatically expand the list and return an empty connection list.
+        /// </summary>
         private List<Connection> GetConnections(ref List<ConnectPort> list, int index)
         {
+            // Expand the list in the Unity Editor
             int count = list.Count - 1;
 
             if (count < index)
@@ -489,16 +612,25 @@ namespace Gork
             return list[index].Connections;
         }
 
+        /// <summary>
+        /// Will remove all connections from the input port with the given <paramref name="index"/>.
+        /// </summary>
         public void RemoveInputConnections(int index)
         {
             RemoveConnections(ref InputConnections, index);
         }
 
+        /// <summary>
+        /// Will remove all connections from the output port with the given <paramref name="index"/>.
+        /// </summary>
         public void RemoveOutputConnections(int index)
         {
             RemoveConnections(ref OutputConnections, index);
         }
 
+        /// <summary>
+        /// Will remove all connections from the given port <paramref name="list"/> at the port with the given <paramref name="index"/>.
+        /// </summary>
         private void RemoveConnections(ref List<ConnectPort> list, int index)
         {
             if (index >= list.Count)
@@ -507,6 +639,30 @@ namespace Gork
             }
 
             list.RemoveAt(index);
+        }
+
+        /// <summary>
+        /// Will return if an input port with the given <paramref name="index"/> has any connections attached.
+        /// </summary>
+        protected bool HasInputConnection(int index)
+        {
+            return HasConnections(InputConnections, index);
+        }
+
+        /// <summary>
+        /// Will return if an output port with the given <paramref name="index"/> has any connections attached.
+        /// </summary>
+        protected bool HasOutputConnection(int index)
+        {
+            return HasConnections(OutputConnections, index);
+        }
+
+        /// <summary>
+        /// Will return if the given <paramref name="list"/> at the port with the given <paramref name="index"/> has any connections attached.
+        /// </summary>
+        protected bool HasConnections(List<ConnectPort> list, int index)
+        {
+            return index >= 0 && index <= list.Count - 1 && list[index].Connections.Count > 0;
         }
 
         /// <summary>
@@ -534,26 +690,31 @@ namespace Gork
                 Node = child;
             }
         }
-        #endregion
+#endregion
 
-        #region Port Types
-        #region Static Fields
+#region Port Types
+#region Static Fields
         public static readonly Dictionary<Type, List<Type>> StaticInputPortTypes = new Dictionary<Type, List<Type>>();
         public static readonly Dictionary<Type, List<Type>> StaticOutputPortTypes = new Dictionary<Type, List<Type>>();
 
         public static readonly Dictionary<Type, int> StaticInputPortTypesLength = new Dictionary<Type, int>();
         public static readonly Dictionary<Type, int> StaticOutputPortTypesLength = new Dictionary<Type, int>();
-        #endregion
+#endregion
 
-        #region Public Instance Fields
+#region Public Instance Fields
         private List<Type> _cachedInputPortTypes;
+        /// <summary>
+        /// Will return a list of <see cref="Type"/> that represents each input ports DataType.
+        /// </summary>
         public List<Type> InputPortTypes
         {
             get
             {
                 if (_cachedInputPortTypes == null)
                 {
-                    _cachedInputPortTypes = StaticInputPortTypes[GetType()];
+                    _cachedInputPortTypes = new List<Type>();
+
+                    BuildInputTypesList(_cachedInputPortTypes);
                 }
 
                 return _cachedInputPortTypes;
@@ -561,47 +722,42 @@ namespace Gork
         }
 
         private List<Type> _cachedOutputPortTypes;
+        /// <summary>
+        /// Will return a list of <see cref="Type"/> that represents each output ports DataType.
+        /// </summary>
         public List<Type> OutputPortTypes
         {
             get
             {
                 if (_cachedOutputPortTypes == null)
                 {
-                    _cachedOutputPortTypes = StaticOutputPortTypes[GetType()];
+                    _cachedOutputPortTypes = new List<Type>();
+
+                    BuildOutputTypesList(_cachedOutputPortTypes);
                 }
 
                 return _cachedOutputPortTypes;
             }
         }
 
-        private int? _cachedInputPortTypeLength = null;
-        public int InputPortTypesLength
+        /// <summary>
+        /// Override this to build the InputTypes list so that another <see cref="GorkNode"/> can know what type the connected nodes have. <para/>
+        /// Use this when working with <see cref="SetInputPort(int, Action{Port})"/> or <see cref="DeleteInputPort(int)"/>.
+        /// </summary>
+        protected virtual void BuildInputTypesList(List<Type> list)
         {
-            get
-            {
-                if (_cachedInputPortTypeLength == null)
-                {
-                    _cachedInputPortTypeLength = StaticInputPortTypesLength[GetType()];
-                }
-
-                return _cachedInputPortTypeLength.Value;
-            }
+            _cachedInputPortTypes = StaticInputPortTypes[GetType()];
         }
 
-        private int? _cachedOutputPortTypeLength = null;
-        public int OutputPortTypesLength
+        /// <summary>
+        /// Override this to build the OutputTypes list so that another <see cref="GorkNode"/> can know what type the connected nodes have. <para/>
+        /// Use this when working with <see cref="SetOutputPort(int, Action{Port})"/> or <see cref="DeleteOutputPort(int)"/>.
+        /// </summary>
+        protected virtual void BuildOutputTypesList(List<Type> list)
         {
-            get
-            {
-                if (_cachedOutputPortTypeLength == null)
-                {
-                    _cachedOutputPortTypeLength = StaticOutputPortTypesLength[GetType()];
-                }
-
-                return _cachedOutputPortTypeLength.Value;
-            }
+            _cachedOutputPortTypes = StaticOutputPortTypes[GetType()];
         }
-        #endregion
+#endregion
 
 #if UNITY_EDITOR
         [InitializeOnLoadMethod]
@@ -668,6 +824,6 @@ namespace Gork
                 }
             }
         }
-        #endregion
+#endregion
     }
 }

@@ -7,19 +7,19 @@ using UnityEngine.UIElements;
 namespace Gork
 {
     /// <summary>
-    /// Is a constant <see cref="string"/> value.
+    /// Gives out either a constant or parameter <see cref="bool"/> value.
     /// </summary>
-    [GorkNodeInfo("Constant/Constant String", GorkColors.STRING_COLOR)]
+    [GorkNodeInfo("Values/Bool Value", GorkColors.BOOL_COLOR)]
     [NoInputPorts]
-    [GorkOutputPort("Value", typeof(string), false)]
-    public class ConstantStringNode : GorkNode
+    [GorkOutputPort("Value", typeof(bool), false)]
+    public class BoolValueNode : GorkNode
     {
-        public string Value = "Text";
+        public bool Value;
 
 #if UNITY_EDITOR
         public override void Initialize(Node node)
         {
-            TextField field = new TextField();
+            Toggle field = new Toggle();
             field.value = Value;
             field.RegisterValueChangedCallback(data =>
             {
@@ -32,7 +32,7 @@ namespace Gork
         }
 #endif
 
-        public override string StringCall(int port)
+        public override bool BoolCall(int port)
         {
             return Value;
         }

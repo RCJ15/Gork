@@ -1,15 +1,39 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="True">
     <ui:VisualElement name="Parent" style="flex-grow: 1;">
-        <uie:Toolbar>
-            <uie:ToolbarButton text="Highlight Current Asset" display-tooltip-when-elided="true" focusable="false" name="HighlightAsset" />
-            <uie:ToolbarButton text="Save Copy..." display-tooltip-when-elided="true" focusable="false" name="SaveCopy" style="left: 10px;" />
-            <uie:ToolbarButton text="Open Asset" display-tooltip-when-elided="true" focusable="false" name="OpenAsset" style="left: 20px;" />
-            <uie:ToolbarButton text="Toggle Minimap" display-tooltip-when-elided="true" focusable="false" name="ToggleMinimap" style="align-items: flex-end; left: 50%;" />
+        <uie:Toolbar style="border-bottom-width: 2px; overflow: hidden; border-bottom-color: rgb(35, 35, 35); height: 23px;">
+            <uie:ToolbarButton text="Highlight Current Graph" display-tooltip-when-elided="true" focusable="false" name="HighlightGraph" style="overflow: hidden; -unity-text-align: middle-center;" />
+            <uie:ToolbarButton text="Save Copy..." display-tooltip-when-elided="true" focusable="false" name="SaveCopy" style="left: 10px; overflow: hidden; -unity-text-align: middle-center;" />
+            <uie:ToolbarButton text="Open Graph" display-tooltip-when-elided="true" focusable="false" name="OpenGraph" style="left: 20px; overflow: hidden; -unity-text-align: middle-center;" />
+            <uie:ToolbarButton text="Minimap" display-tooltip-when-elided="true" focusable="false" name="ToggleMinimap" style="-unity-text-align: middle-left; right: 0; position: absolute; left: initial; top: 0; bottom: 0; overflow: hidden; width: 80px;">
+                <ui:VisualElement name="Image" style="left: 58px; position: absolute; top: 2px; right: 0; bottom: 0; height: 18px; width: 18px;" />
+                <ui:VisualElement name="Highlight" style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; background-color: rgba(255, 255, 255, 0.15);" />
+            </uie:ToolbarButton>
         </uie:Toolbar>
-        <ui:VisualElement name="Panel" style="position: relative; flex-grow: 1;">
-            <Gork.Editor.GorkGraphView focusable="true" style="flex-grow: 1;" />
-            <ui:Label text="Not Editing..." display-tooltip-when-elided="true" name="CurrentlyEditingText" style="position: absolute; left: 0; top: 0; right: 0; bottom: auto; opacity: 1; background-color: rgba(0, 0, 0, 0.5); -unity-text-align: upper-center;" />
-        </ui:VisualElement>
+        <Gork.Editor.GorkSplitView fixed-pane-initial-dimension="300">
+            <ui:VisualElement name="InspectorParent">
+                <Gork.Editor.GorkInspectorView focusable="true" style="left: 0; top: 20.5px; right: 0; bottom: 36px; position: absolute;" />
+                <uie:Toolbar name="TopBar" style="border-bottom-width: 2px; background-color: rgb(35, 35, 35);">
+                    <uie:ToolbarButton display-tooltip-when-elided="true" focusable="false" text="+" name="AddButton" style="position: absolute; left: 0; right: 0; bottom: 0; top: 0; width: 40px; overflow: hidden; -unity-font-style: normal; padding-left: 2px; font-size: 25px; padding-right: 0; padding-top: 0; -unity-text-align: middle-left; padding-bottom: 5px; border-left-width: 0; border-right-width: 2px; justify-content: center;">
+                        <ui:VisualElement name="Image" style="left: 23px; position: absolute; top: 6.5px; right: 0; bottom: 0; height: 7px; width: 7.5px;" />
+                    </uie:ToolbarButton>
+                    <uie:ToolbarPopupSearchField focusable="true" name="SearchTextField" style="margin-left: 0; margin-right: 0; margin-top: 0; margin-bottom: 0; position: absolute; left: 40px; top: 0; right: 0; bottom: 0; width: auto; min-width: 0; min-height: 0; border-left-color: rgb(33, 33, 33); border-right-color: rgb(33, 33, 33); border-top-color: rgb(33, 33, 33); border-bottom-color: rgb(33, 33, 33);">
+                        <ui:Label text="Search..." display-tooltip-when-elided="true" name="PlaceholderText" picking-mode="Ignore" style="position: absolute; left: 15px; top: 0; right: 0; bottom: 0; -unity-text-align: middle-left; color: rgba(210, 210, 210, 0.5); -unity-font-style: italic; margin-left: 0; margin-right: 100%; padding-right: 0;" />
+                    </uie:ToolbarPopupSearchField>
+                </uie:Toolbar>
+                <uie:Toolbar name="BottomBar" style="top: initial; bottom: 0; position: absolute; right: 0; left: 0; height: 36px;">
+                    <uie:ToolbarButton text="Parameters" display-tooltip-when-elided="true" focusable="false" name="Parameters" style="left: 0; position: absolute; right: initial; bottom: 0; top: 0; -unity-text-align: middle-center; width: 50%; border-top-width: 2px; white-space: nowrap; border-left-width: 0; overflow: hidden;">
+                        <ui:VisualElement name="Highlight" style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; background-color: rgba(255, 255, 255, 0.15);" />
+                    </uie:ToolbarButton>
+                    <uie:ToolbarButton text="Events" display-tooltip-when-elided="true" focusable="false" name="Events" style="left: initial; right: 0; position: absolute; bottom: 0; top: 0; -unity-text-align: middle-center; width: 50%; border-top-width: 2px; white-space: nowrap; border-right-width: 0; overflow: hidden;">
+                        <ui:VisualElement name="Highlight" style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; background-color: rgba(255, 255, 255, 0.15);" />
+                    </uie:ToolbarButton>
+                </uie:Toolbar>
+            </ui:VisualElement>
+            <ui:VisualElement name="Panel" style="flex-grow: 1;">
+                <Gork.Editor.GorkGraphView focusable="true" style="flex-grow: 1;" />
+                <ui:Label text="Not Editing..." display-tooltip-when-elided="true" name="CurrentlyEditingText" style="position: absolute; left: 0; top: 0; right: 0; bottom: initial; opacity: 1; -unity-text-align: middle-center; height: 20px; background-color: rgba(0, 0, 0, 0.5); overflow: hidden;" />
+            </ui:VisualElement>
+        </Gork.Editor.GorkSplitView>
     </ui:VisualElement>
     <ui:Label text="No Gork Graph is being edited!" display-tooltip-when-elided="true" name="NoGraphText" style="flex-grow: 1; position: absolute; left: 0; top: 0; right: 0; bottom: 0; -unity-text-align: middle-center; font-size: 30px; color: rgb(255, 255, 255); -unity-font-style: bold; background-color: rgba(0, 0, 0, 0.5);">
         <ui:VisualElement name="RightSide" style="position: absolute; left: 50%; right: 0; top: 55%;">

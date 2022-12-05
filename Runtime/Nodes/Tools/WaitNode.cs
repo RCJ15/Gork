@@ -29,7 +29,7 @@ namespace Gork
         {
             SetupInspector();
 
-            SerializedProperty prop = serializedObject.FindProperty("WaitTime");
+            SerializedProperty prop = serializedObject.FindProperty(nameof(WaitTime));
 
             prop.floatValue = EditorGUILayout.FloatField("Time", prop.floatValue);
 

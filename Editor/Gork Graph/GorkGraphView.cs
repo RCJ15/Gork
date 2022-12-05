@@ -26,6 +26,7 @@ namespace Gork.Editor
         public GorkNodeSearchWindow GorkSearchWindow => _searchWindow;
 
         private MiniMap miniMap;
+        public MiniMap MiniMap => miniMap;
 
         private Vector3 _cachedMousePos;
         public Vector3 MousePos => TransformScreenPos(_cachedMousePos);
@@ -56,7 +57,7 @@ namespace Gork.Editor
             _searchWindow.GraphView = this;
 
             // Open search window when node creation is requested
-            nodeCreationRequest =context => OpenNodeCreationSearchWindow(context);
+            //nodeCreationRequest = context => OpenNodeCreationSearchWindow(context);
 
             #region Create minimap
             miniMap = new MiniMap()
@@ -221,48 +222,8 @@ namespace Gork.Editor
             // Save assets and reimport the graph
             SaveAsset();
 
-            // Reopen the graph to refresh the graph view BAD TAKES TOO LONG!!!
+            // Reopen the graph to refresh the graph view
             OpenGraph(Graph);
-
-            /*
-
-            GraphViewChange change = new GraphViewChange();
-            change.elementsToRemove = new List<GraphElement>();
-
-            HashSet<GorkNode> nodesNotCreated = new HashSet<GorkNode>();
-            HashSet<GorkNodeView> nodeViews = new HashSet<GorkNodeView>();
-
-            // Find out what things have changed since the last undo
-            foreach (GorkNode node in Graph.Nodes)
-            {
-                GorkNodeView nodeView = GetNodeView(node);
-
-                if (nodeView == null)
-                {
-                    nodesNotCreated.Add(node);
-                }
-                else
-                {
-                    nodeViews.Add(nodeView);
-                }
-            }
-
-            UQueryState<GraphElement> graphElements = this.graphElements;
-
-            foreach (GraphElement element in graphElements)
-            {
-                GorkNodeView nodeView = element as GorkNodeView;
-
-                if (nodeView != null && nodeViews.Contains(nodeView))
-                {
-                    continue;
-                }
-
-                change.elementsToRemove.Add(element);
-            }
-
-            graphViewChanged.Invoke(change);
-            */
         }
 
         /// <summary>
@@ -288,17 +249,16 @@ namespace Gork.Editor
 
             RemoveAllElements();
 
+            Graph.Nodes.RemoveAll(node => node == null);
+
             // Create all nodes in the GraphView by looping through all of the nodes in the graph
             Graph.Nodes.ForEach(node =>
             {
-                // Ignore empty nodes
-                if (node == null)
-                {
-                    return;
-                }
+                Type nodeType = node.GetType();
+                GorkNodeInfoAttribute attribute = GorkNodeInfoAttribute.TypeAttributes.ContainsKey(nodeType) ? GorkNodeInfoAttribute.TypeAttributes[nodeType][node.AttributeID] : null;
 
                 // Create the node view
-                GorkNodeView nodeView = CreateNodeView(node);
+                GorkNodeView nodeView = CreateNodeView(node, attribute);
             });
 
             // Create all the edges (connections) by looping through all of the nodes in the graph again
@@ -342,6 +302,7 @@ namespace Gork.Editor
 
                         // Get the child node view and the child port
                         GorkNodeView childNodeView = GetNodeView(connection.Node);
+
                         GorkPort childPort = childNodeView.InputPorts[connection.PortIndex];
 
                         // Connect the parent port to the child port
@@ -450,7 +411,7 @@ namespace Gork.Editor
                             Undo.DestroyObjectImmediate(node);
 
                             Type nodeType = node.GetType();
-                            string displayName = GorkNodeInfoAttribute.TypeAttributes.ContainsKey(nodeType) ? GorkNodeInfoAttribute.TypeAttributes[nodeType].NodeName : nodeType.Name;
+                            string displayName = nodeView.Attribute == null ? nodeType.Name : nodeView.Attribute.NodeName;
                             Undo.SetCurrentGroupName($"Deleted \"{displayName}\"");
                         }
                     }
@@ -794,6 +755,23 @@ namespace Gork.Editor
 
                 Type type = port.portType;
 
+                // Is not signal?
+                if (!thisType.IsSignal())
+                {
+                    // String type
+                    if (type == typeof(string))
+                    {
+                        compatiblePorts.Add(port);
+                        continue;
+                    }
+                    // Generic c# system.object type
+                    else if (type == typeof(object))
+                    {
+                        compatiblePorts.Add(port);
+                        continue;
+                    }
+                }
+
                 if (thisType != type)
                 {
                     if (!GorkConverterAttribute.GorkConvertion.ContainsKey(thisType))
@@ -813,7 +791,7 @@ namespace Gork.Editor
             return compatiblePorts;
         }
 
-        public GorkNodeView CreateNode(Type nodeType, Vector2 position, List<GorkNodeView.FieldData> fieldData = null)
+        public GorkNodeView CreateNode(Type nodeType, Vector2 position, GorkNodeInfoAttribute attribute = null, List<GorkNodeView.FieldData> fieldData = null)
         {
             if (nodeType == null)
             {
@@ -823,17 +801,17 @@ namespace Gork.Editor
             GorkNode node = Graph.CreateNode(nodeType);
             node.Position = position;
 
-            return CreateNodeView(node, fieldData);
+            return CreateNodeView(node, attribute, fieldData);
         }
 
-        private GorkNodeView CreateNodeView(GorkNode node, List<GorkNodeView.FieldData> fieldData = null)
+        private GorkNodeView CreateNodeView(GorkNode node, GorkNodeInfoAttribute attribute = null, List<GorkNodeView.FieldData> fieldData = null)
         {
             if (node == null)
             {
                 return null;
             }
 
-            GorkNodeView nodeView = new GorkNodeView(node, this, fieldData);
+            GorkNodeView nodeView = new GorkNodeView(node, this, attribute, fieldData);
 
             AddElement(nodeView);
 
@@ -990,8 +968,11 @@ namespace Gork.Editor
                     continue;
                 }
 
+                // Determine the attribute which the pasted node will use
+                GorkNodeInfoAttribute attribute = GorkNodeInfoAttribute.TypeAttributes.ContainsKey(nodeType) ? GorkNodeInfoAttribute.TypeAttributes[nodeType][nodeData.AttributeID] : null;
+
                 // Create a new node
-                GorkNodeView nodeView = CreateNode(nodeType, nodeData.Position, nodeData.FieldData);
+                GorkNodeView nodeView = CreateNode(nodeType, nodeData.Position, attribute, nodeData.FieldData);
                 //nodeView.LoadFromFieldData(nodeData.FieldData);
 
                 nodes.Add(nodeView);

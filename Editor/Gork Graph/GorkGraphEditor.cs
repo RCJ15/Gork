@@ -57,8 +57,11 @@ namespace Gork.Editor
 
         private GorkGraph _graph;
         private GorkGraphView _graphView;
+        private GorkInspectorView _inspectorView;
 
-        private GorkAssetSearchWindow _searchWindow;
+        private const string EYEBALL_OPEN_BASE64 = "iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsIAAA7CARUoSoAAAALfSURBVFhH7ZRLaFNBFIZvXhYTxAha0F0FKRIRi6UNaXQpCIILBauWoiiC0khRURD6cmcXvhBFTVdGcKVVcOvGNLUhBESKdOFCN2o3itSGPJr4nbmTa5qmvdl7fzj85zVzzj13ZgwHDhz893BptkU2m92Sy+X2VyqVqMvliuBqRQ/Afuyf8JyW98Fg8GUoFFpAt4VtA1NTU3ugy8gxCvqU0wY0tEjupNfrfRgOh5Pa3RCrNpDJZLbm8/nHbHRIbDYtoku+V+w1UCKXVLNZ9ITH47lCIz9UtA4NG+CrD7NBHHUzG/yGbyGf8T2VuB1Y00/uDvgivBHXL2QgGo0+Uwk1cGu2kEqlhlg0iSrFn/t8vvaenp4x7FMqoQmwvp9iwy0tLTsxXyBBJJFMJoclXotlDfDlsXK5fAN1ye12xyh8vKur67vE2HS3cDOgcZXb2dn5jUaOYF9TAcMYo8ao1hWsBgj0QncRKX40EoncV4F/WK/ZFjTr16oCHzJebYLYCJM4qQKgdgKjBOVMDFBcfkE9ZjU3gxW5tU3AQ8oJrAYonhcm2KYcdcA/oVVbrJGrJlOtJaidwBALywSv8jtuap8FphIn/labq0JyJFebFthTbsQIqlzT66a3pgEOy2sCl0SXJrgN47B1TYlVONV9azUhMZ1T0S7Zy6MP3h3xI6f5HW/MKGs0WyD5AovuoXrE5ECe54s+qiCQpmjuLHwGM2R6jVk2ntBTsorPzMy0lUqlBLkR/GVccrMemFETDR+i6enpg1zHOAu3YZaQR7wHT7q7uz+oBBvwEbsgeb5PsMc6+CvSx5TfwcvQsAEBV2UDJG9CDJFpyIhlEq/gT0xmDpkvFAp+2E+h7UiU+D5kr+SDJSQRCAQGOzo65DVcgVUbqCKdToeKxeI51F4KtJpeWyzIL4FvM/IvpqsxbBuoguJeRnsANYy0a9lEoT/EFtHn0VOIjDnNecjBDhw4cGADw/gLI3wpk62HVKwAAAAASUVORK5CYII=";
+        private const string EYEBALL_CLOSE_BASE64 = "iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsIAAA7CARUoSoAAAAMySURBVFhH7ZY9aFNRFMdfEptWiw5SqYtQQdRBXExDklY3LbooRRG1gl9TbQUdFIq1dnCwoINKJ1vFDxAnrYiLOEiStkgztYODizioqIOCIc2Xv3NzX/pe3ntJh1RB+ofLufec887/fz8TYxn/Gj5tlwTFYtGXSCT2Sr+jo+OVz+crqoAFfm3rDiFPJpN36b6UZgqpxJIIMMmxp7TLE3UX4EbO0o/LFuihDXU9A17ksVjsjNv+CxYtIJVKrUun0110Y7R2SFop2qKChvGd8RdsM22r8oBa5IKaAjg8uyh+liIHsEHtronFkAs8BUxOTrbl8/kbdLtlTKEsAiR/hYyrwSSnxnG+6Q4EAn2RSOSTDtvgKoB9PMSH92mrKPYT103aB8YPVUIVmOQzMzMbMpnMLN+slhrY3s7Ozsc6rQzHLYB8uFAoPNXkTxoaGrZwgocJnShleMMkn5qaCodCoY+NjY3b8E1Qaw3hR/F4/EopcwE2ASQMQC5Jeb/f3w/xkXA4/FliFNku1gsmuSw7W/dCfCKCGvuJXVJJhjHMmbqq+wplAcz8KOYaTcgPUuyOCixgpbYOWMkReg+XLRcRI6YI4kNM9JgKgLIAAuby9FHsme5bMaetDZXkNKnpyLWKwA4qJ7AKyIgluFE5KoB/THfL8CB3zRXgD4g1uQRlAWCQhALBi+zTde1TwCe3JVIalVCF/A1++RGygZonyVFbzLW8XPJaBHBFJvj4gvRFBGdiRIileT2vbuSc/B6s7fGBfIiccakF+qPRqDqkAsc7QHIvibfoynLFOZBfuRnqMRJYyKP4n+Nqos3hH5OZW8kRvomcUbq7aXli5zkLt1VQw/Uh4pTuEyKEtGqXgkluJXHD9PT05mw2e47uaVoT+T+YyGFm/lolWOAqQJYK9Q+wPdplnfke+s3s43uK/pqfn5c9bcnlcm2ktdPkB2uHXu4C/TG2ZYA34Rt9BxwCNPmi9twL5MvzLc/uKEs+q5wesAmoRo4tEusithN3CLseuxa/1JDZyc/xO4aJYDD4lhn/ZlwTNgGy9xj5D6dgJdeuusNzKf8GucCxBVzDqn+jl7GM/wyG8QdWAdchDSqEIwAAAABJRU5ErkJggg==";
+        private static Texture2D _eyeballOpenTexture, _eyeballCloseTexture = null;
 
         // Getting current open file path in the project window using System.Reflection
         private MethodInfo _getFolderPath = typeof(ProjectWindowUtil).GetMethod("GetActiveFolderPath", BindingFlags.Static | BindingFlags.NonPublic);
@@ -76,16 +79,6 @@ namespace Gork.Editor
         {
             GorkGraphEditor window = Open();
             window.OpenGraph(graph);
-        }
-
-        private void OnEnable()
-        {
-            _searchWindow = CreateInstance<GorkAssetSearchWindow>();
-        }
-
-        private void OnDisable()
-        {
-            DestroyImmediate(_searchWindow);
         }
 
         public void CreateGUI()
@@ -106,7 +99,7 @@ namespace Gork.Editor
 
             #region Toolbar Buttons
             // Ping object
-            root.Q<ToolbarButton>("HighlightAsset").clicked += () =>
+            root.Q<ToolbarButton>("HighlightGraph").clicked += () =>
             {
                 if (_graphView.Graph == null)
                 {
@@ -173,15 +166,41 @@ namespace Gork.Editor
             };
 
             // Open Asset
-            root.Q<ToolbarButton>("OpenAsset").clicked += () =>
+            root.Q<ToolbarButton>("OpenGraph").clicked += () =>
             {
                 OpenExisting();
             };
 
+            #region Eyeball Icon for Minimap Toggle
+            ToolbarButton toggleMinimap = root.Q<ToolbarButton>("ToggleMinimap");
+            VisualElement minimapEyeballIcon = toggleMinimap.Q<VisualElement>("Image");
+            VisualElement minimapHighlight = toggleMinimap.Q<VisualElement>("Highlight");
+
+            // Cache and load the textures if they have not been loaded yet
+            if (_eyeballOpenTexture == null)
+            {
+                // Load texture from base 64
+                _eyeballOpenTexture = GorkEditorUtility.Texture2DFromBase64(EYEBALL_OPEN_BASE64);
+            }
+            if (_eyeballCloseTexture == null)
+            {
+                // Load texture from base 64
+                _eyeballCloseTexture = GorkEditorUtility.Texture2DFromBase64(EYEBALL_CLOSE_BASE64);
+            }
+            #endregion
+
+            minimapEyeballIcon.SetTexture(_eyeballCloseTexture);
+            minimapHighlight.visible = false;
+
             // Toggle Minimap
-            root.Q<ToolbarButton>("ToggleMinimap").clicked += () =>
+            toggleMinimap.clicked += () =>
             {
                 _graphView.ToggleMiniMap();
+
+                bool minimapVisible = _graphView.MiniMap.visible;
+
+                minimapEyeballIcon.SetTexture(minimapVisible ? _eyeballOpenTexture : _eyeballCloseTexture);
+                minimapHighlight.visible = minimapVisible;
             };
             #endregion
 
@@ -243,6 +262,14 @@ namespace Gork.Editor
             };
             #endregion
 
+            _inspectorView = root.Q<GorkInspectorView>();
+            Undo.undoRedoPerformed += _inspectorView.OnUndoRedo;
+
+            _inspectorView.Initialize(root);
+            _inspectorView.GraphView = _graphView;
+
+            //GorkSplitView splitView = root.Q<GorkSplitView>();
+
             // Currently editing text
             _currentlyEditingText = root.Q<Label>("CurrentlyEditingText");
             _currentlyEditingDefaultText = _currentlyEditingText.text;
@@ -266,6 +293,7 @@ namespace Gork.Editor
         private void OnDestroy()
         {
             Undo.undoRedoPerformed -= _graphView.OnUndoRedo;
+            Undo.undoRedoPerformed -= _inspectorView.OnUndoRedo;
         }
 
         private void OpenExisting()
@@ -310,7 +338,9 @@ namespace Gork.Editor
             GorkGraph graph = AssetDatabase.LoadAssetAtPath<GorkGraph>(path);
             */
 
-            _searchWindow.OnSelectGorkEntry = graph =>
+            GorkAssetSearchWindow window = GorkAssetSearchWindow.Instance;
+
+            window.OnSelectGorkEntry = graph =>
             {
                 if (graph == null)
                 {
@@ -323,7 +353,7 @@ namespace Gork.Editor
                 Selection.objects = new UnityEngine.Object[] { graph };
             };
 
-            SearchWindow.Open(new SearchWindowContext(GUIUtility.GUIToScreenPoint(Event.current.mousePosition)), _searchWindow);
+            SearchWindow.Open(new SearchWindowContext(GUIUtility.GUIToScreenPoint(Event.current.mousePosition)), window);
         }
 
         private void OpenGraph(GorkGraph graph)

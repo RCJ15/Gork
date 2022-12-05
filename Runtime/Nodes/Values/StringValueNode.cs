@@ -1,26 +1,25 @@
 #if UNITY_EDITOR
 using UnityEditor;
 using UnityEditor.Experimental.GraphView;
-using UnityEditor.UIElements;
 using UnityEngine.UIElements;
 #endif
 
 namespace Gork
 {
     /// <summary>
-    /// Is a constant <see cref="int"/> value.
+    /// Gives out either a constant or parameter <see cref="string"/> value.
     /// </summary>
-    [GorkNodeInfo("Constant/Constant Int", GorkColors.INT_COLOR)]
+    [GorkNodeInfo("Values/String Value", GorkColors.STRING_COLOR)]
     [NoInputPorts]
-    [GorkOutputPort("Value", typeof(int), false)]
-    public class ConstantIntNode : GorkNode
+    [GorkOutputPort("Value", typeof(string), false)]
+    public class StringValueNode : GorkNode
     {
-        public int Value;
+        public string Value = "Text";
 
 #if UNITY_EDITOR
         public override void Initialize(Node node)
         {
-            IntegerField field = new IntegerField();
+            TextField field = new TextField();
             field.value = Value;
             field.RegisterValueChangedCallback(data =>
             {
@@ -33,7 +32,7 @@ namespace Gork
         }
 #endif
 
-        public override int IntCall(int port)
+        public override string StringCall(int port)
         {
             return Value;
         }

@@ -39,6 +39,7 @@ namespace Gork.Editor
         public int PortIndex;
 
         private static readonly Color _boolColor = new Color(0.549f, 1, 0.556f, 1);
+        private static readonly Color _objColor = new Color(0.3372f, 0.6117f, 0.8392f, 1);
 
         protected GorkPort(Orientation orientation, Direction direction, Capacity capacity, Type type, GorkNodeView nodeView) : base(orientation, direction, capacity, type)
         {
@@ -55,6 +56,11 @@ namespace Gork.Editor
             if (portType == typeof(bool))
             {
                 portColor = _boolColor;
+            }
+            // Same goes for generic C# objects, this time the color matches the blue color the object datatype has in the regular visual studio theme
+            else if (portType == typeof(object))
+            {
+                portColor = _objColor;
             }
             // Use GorkPortColorAttribute to color the port in
             else if (GorkPortColorAttribute.Attributes.TryGetValue(portType, out var attribute))

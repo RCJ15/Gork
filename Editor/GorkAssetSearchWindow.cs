@@ -13,6 +13,20 @@ namespace Gork.Editor
     /// </summary>
     public class GorkAssetSearchWindow : ScriptableObject, ISearchWindowProvider
     {
+        private static GorkAssetSearchWindow _cachedInstance;
+        public static GorkAssetSearchWindow Instance
+        {
+            get
+            {
+                if (_cachedInstance == null)
+                {
+                    _cachedInstance = CreateInstance<GorkAssetSearchWindow>();
+                }
+
+                return _cachedInstance;
+            }
+        }
+
         public Action<GorkGraph> OnSelectGorkEntry;
 
         private static readonly Type _gorkGraphType = typeof(GorkGraph);

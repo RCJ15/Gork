@@ -31,6 +31,22 @@ namespace Gork
         public delegate void OnGraphStopEvent();
         public OnGraphStopEvent OnGraphStop;
 
+#if UNITY_EDITOR
+        private SerializedObject _cachedSerializedObject;
+        public SerializedObject SerializedObject
+        {
+            get
+            {
+                if (_cachedSerializedObject == null)
+                {
+                    _cachedSerializedObject = new SerializedObject(this);
+                }
+
+                return _cachedSerializedObject;
+            }
+        }
+#endif
+
         #region Gork Node Dictionary
         private Dictionary<Type, List<GorkNode>> _cachedGorkNodeDictionary = null;
 
@@ -222,6 +238,269 @@ namespace Gork
             // Remove the connections from the lists
             parentList.Remove(new GorkNode.Connection(childPort, child));
             childList.Remove(new GorkNode.Connection(parentPort, parent));
+        }
+
+        #region Parameters
+        [SerializeField] private List<Parameter> _parameters = new List<Parameter>();
+        public List<Parameter> Parameters => _parameters;
+
+        private Dictionary<Type, Dictionary<string, object>> _parameterStartValues = null;
+        private Dictionary<Type, Dictionary<string, object>> _cachedRuntimeParameters = null;
+        private Dictionary<Type, Dictionary<string, object>> RuntimeParameters
+        {
+            get
+            {
+                // Create and cache the RuntimeParameters dictionary if it's null
+                if (_cachedRuntimeParameters == null)
+                {
+                    _parameterStartValues = new Dictionary<Type, Dictionary<string, object>>();
+                    _cachedRuntimeParameters = new Dictionary<Type, Dictionary<string, object>>();
+
+                    // Loop through all parameters in the GorkGraph
+                    foreach (Parameter parameter in Parameters)
+                    {
+                        // Cache the type and name of the parameter
+                        Type parameterType = parameter.ActualType;
+                        string parameterName = parameter.Name;
+
+                        // Create the dictionary for this parameter type if it doesn't already exist
+                        if (!_cachedRuntimeParameters.ContainsKey(parameterType))
+                        {
+                            _cachedRuntimeParameters[parameterType] = new Dictionary<string, object>();
+                            _parameterStartValues[parameterType] = new Dictionary<string, object>();
+                        }
+
+                        // Prevent multiple of the same parameter from being added
+                        if (_cachedRuntimeParameters[parameterType].ContainsKey(parameterName))
+                        {
+#if UNITY_EDITOR
+                            Debug.LogWarning($"Gork Graph \"{name}\" has two parameters with the name \"{parameterName}\" and with the same type \"{parameterType}\"!");
+#endif
+                            continue;
+                        }
+
+                        object value;
+
+                        // Parsing with string doesn't require JSON deserialization
+                        if (parameterType == typeof(string))
+                        {
+                            value = parameter.Value;
+                        }
+                        // Deserialize the JSON value
+                        else
+                        {
+                            value = GorkUtility.FromJson(parameter.Value, parameterType);
+                        }
+
+                        // Set the parameter value and start value
+                        _cachedRuntimeParameters[parameterType][parameterName] = value;
+                        _parameterStartValues[parameterType][parameterName] = value;
+                    }
+                }
+
+                return _cachedRuntimeParameters;
+            }
+        }
+
+        #region Has Parameter
+        /// <summary>
+        /// Returns if a parameter with the given <paramref name="name"/> and <paramref name="type"/> exists or not.
+        /// </summary>
+        public bool HasParameter(string name, Type type)
+        {
+            if (!RuntimeParameters.ContainsKey(type))
+            {
+                return false;
+            }
+
+            if (!RuntimeParameters[type].ContainsKey(name))
+            {
+                return false;
+            }
+
+            return true;
+        }
+        /// <summary>
+        /// Returns if a parameter with the given <paramref name="name"/> and <paramref name="T"/> exists or not.
+        /// </summary>
+        public bool HasParameter<T>(string name) => HasParameter(name, typeof(T));
+
+        /// <summary>
+        /// Returns if a <see cref="float"/> parameter with the given <paramref name="name"/> exists or not.
+        /// </summary>
+        public bool HasFloat(string name) => HasParameter<float>(name);
+        /// <summary>
+        /// Returns if a <see cref="int"/> parameter with the given <paramref name="name"/> exists or not.
+        /// </summary>
+        public bool HasInt(string name) => HasParameter<int>(name);
+        /// <summary>
+        /// Returns if a <see cref="bool"/> parameter with the given <paramref name="name"/> exists or not.
+        /// </summary>
+        public bool HasBool(string name) => HasParameter<bool>(name);
+        /// <summary>
+        /// Returns if a <see cref="string"/> parameter with the given <paramref name="name"/> exists or not.
+        /// </summary>
+        public bool HasString(string name) => HasParameter<string>(name);
+        #endregion
+
+        #region Get Parameter
+        /// <summary>
+        /// Returns the parameter with the type of <paramref name="type"/> and with the given <paramref name="name"/>.
+        /// </summary>
+        public object GetParameter(string name, Type type)
+        {
+            if (!HasParameter(name, type))
+            {
+#if UNITY_EDITOR
+                Debug.LogWarning($"Gork Graph \"{name}\" does not contain any parameters that have the name \"{name}\" and type \"{type}\"!");
+#endif
+                return default;
+            }
+
+            // Return the value
+            return RuntimeParameters[type][name];
+        }
+        /// <summary>
+        /// Returns the parameter with the type of <paramref name="T"/> and with the given <paramref name="name"/>.
+        /// </summary>
+        public T GetParameter<T>(string name) => (T)GetParameter(name, typeof(T));
+
+        /// <summary>
+        /// Returns the <see cref="float"/> parameter with the given <paramref name="name"/>.
+        /// </summary>
+        public float GetFloat(string name) => GetParameter<float>(name);
+        /// <summary>
+        /// Returns the <see cref="int"/> parameter with the given <paramref name="name"/>.
+        /// </summary>
+        public int GetInt(string name) => GetParameter<int>(name);
+        /// <summary>
+        /// Returns the <see cref="bool"/> parameter with the given <paramref name="name"/>.
+        /// </summary>
+        public bool GetBool(string name) => GetParameter<bool>(name);
+        /// <summary>
+        /// Returns the <see cref="string"/> parameter with the given <paramref name="name"/>.
+        /// </summary>
+        public string GetString(string name) => GetParameter<string>(name);
+        #endregion
+
+        #region Set Parameter
+        /// <summary>
+        /// Sets the parameter with the type of <paramref name="type"/> and with the given <paramref name="name"/> to the given <paramref name="value"/>.
+        /// </summary>
+        public void SetParameter(string name, Type type, object value)
+        {
+            if (!HasParameter(name, type))
+            {
+#if UNITY_EDITOR
+                Debug.LogWarning($"Gork Graph \"{name}\" does not contain any parameters that have the name \"{name}\" and type \"{type}\"!");
+#endif
+                return;
+            }
+
+            // Set the value
+            RuntimeParameters[type][name] = value;
+        }
+        /// <summary>
+        /// Sets the parameter with the type of <paramref name="T"/> and with the given <paramref name="name"/> to the given <paramref name="value"/>.
+        /// </summary>
+        public void SetParameter<T>(string name, T value) => SetParameter(name, typeof(T), value);
+
+        /// <summary>
+        /// Sets the <see cref="float"/> parameter with the given <paramref name="name"/> to the given <paramref name="value"/>.
+        /// </summary>
+        public void SetFloat(string name, float value) => SetParameter(name, value);
+        /// <summary>
+        /// Sets the <see cref="int"/> parameter with the given <paramref name="name"/> to the given <paramref name="value"/>.
+        /// </summary>
+        public void SetInt(string name, int value) => SetParameter(name, value);
+        /// <summary>
+        /// Sets the <see cref="bool"/> parameter with the given <paramref name="name"/> to the given <paramref name="value"/>.
+        /// </summary>
+        public void SetBool(string name, bool value) => SetParameter(name, value);
+        /// <summary>
+        /// Sets the <see cref="string"/> parameter with the given <paramref name="name"/> to the given <paramref name="value"/>.
+        /// </summary>
+        public void SetString(string name, string value) => SetParameter(name, value);
+        #endregion
+
+        #region Reset Parameter
+        /// <summary>
+        /// Resets the parameter with the type of <paramref name="type"/> and with the given <paramref name="name"/> to it's starting value set in the GorkEditorWindow.
+        /// </summary>
+        public void ResetParameter(string name, Type type)
+        {
+            if (!HasParameter(name, type))
+            {
+#if UNITY_EDITOR
+                Debug.LogWarning($"Gork Graph \"{name}\" does not contain any parameters that have the name \"{name}\" and type \"{type}\"!");
+#endif
+                return;
+            }
+
+            // Set to start value
+            RuntimeParameters[type][name] = _parameterStartValues[type][name];
+        }
+        /// <summary>
+        /// Resets the parameter with the type of <paramref name="T"/> and with the given <paramref name="name"/> to it's starting value set in the GorkEditorWindow.
+        /// </summary>
+        public void ResetParameter<T>(string name) => ResetParameter(name, typeof(T));
+
+        /// <summary>
+        /// Resets the <see cref="float"/> parameter the given <paramref name="name"/> to it's starting value set in the GorkEditorWindow.
+        /// </summary>
+        public void ResetFloat(string name) => ResetParameter<float>(name);
+        /// <summary>
+        /// Resets the <see cref="int"/> parameter the given <paramref name="name"/> to it's starting value set in the GorkEditorWindow.
+        /// </summary>
+        public void ResetInt(string name) => ResetParameter<int>(name);
+        /// <summary>
+        /// Resets the <see cref="bool"/> parameter the given <paramref name="name"/> to it's starting value set in the GorkEditorWindow.
+        /// </summary>
+        public void ResetBool(string name) => ResetParameter<bool>(name);
+        /// <summary>
+        /// Resets the <see cref="string"/> parameter the given <paramref name="name"/> to it's starting value set in the GorkEditorWindow.
+        /// </summary>
+        public void ResetString(string name) => ResetParameter<string>(name);
+
+        /// <summary>
+        /// Resets all parameters in this <see cref="GorkGraph"/> back to their starting values set in the GorkEditorWindow.
+        /// </summary>
+        public void ResetAllParamters()
+        {
+            foreach (var pair1 in RuntimeParameters)
+            {
+                foreach (var pair2 in pair1.Value)
+                {
+                    RuntimeParameters[pair1.Key][pair2.Key] = _parameterStartValues[pair1.Key][pair2.Key];
+                }
+            }
+        }
+        #endregion
+
+        /// <summary>
+        /// Class that contains data for a single parameter in a <see cref="GorkGraph"/>.
+        /// </summary>
+        [Serializable]
+        public class Parameter
+        {
+            public string Name;
+            public DataType Type;
+            public Type ActualType => Type.ActualType();
+
+            public string Value;
+        }
+        #endregion
+
+        #region Events
+        #endregion
+
+        [Serializable]
+        public enum DataType
+        {
+            Float,
+            Int,
+            Bool,
+            String
         }
     }
 }

@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System;
 
 #if UNITY_EDITOR
 using UnityEngine.UIElements;
@@ -20,6 +21,16 @@ namespace Gork
     {
         [TextArea(1, 5)]
         public string[] Choices = new string[] { "Yes", "No" };
+
+        protected override void BuildOutputTypesList(List<Type> list)
+        {
+            int choicesLength = Choices.Length;
+
+            for (int i = 0; i < choicesLength; i++)
+            {
+                list.Add(null);
+            }
+        }
 
 #if UNITY_EDITOR
         public override void Initialize(Node node)
@@ -85,15 +96,28 @@ namespace Gork
             int portCount = OutputPorts.Count;
             int max = Mathf.Max(portCount, length);
 
+            int? removalStartIndex = null;
+            int removalCount = 0;
+
             for (int i = 0; i < max; i++)
             {
                 if (i >= length)
                 {
-                    DeleteOutputPort(i);
+                    if (!removalStartIndex.HasValue)
+                    {
+                        removalStartIndex = i;
+                    }
+
+                    removalCount++;
                     continue;
                 }
 
                 SetOutputPort(i, $"Choice {i + 1}");
+            }
+
+            if (removalStartIndex.HasValue)
+            {
+                DeleteOutputPortRange(removalStartIndex.Value, removalCount);
             }
         }
 #endif

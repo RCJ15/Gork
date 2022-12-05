@@ -11,43 +11,45 @@ using UnityEditor;
 namespace Gork
 {
     /// <summary>
-    /// <see cref="Attribute"/> for <see cref="GorkNode"/> that contains some important information. <para/>
+    /// An <see cref="Attribute"/> which contains important information about a <see cref="GorkNode"/>. <para/>
+    /// Each one of these attriutes added to a <see cref="GorkNode"/ > will create an entry in the gork node creation menu. <para/>
     /// Every <see cref="GorkNode"/> should implement this.
     /// </summary>
-    [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = true)]
+    [AttributeUsage(AttributeTargets.Class, AllowMultiple = true, Inherited = true)]
     public class GorkNodeInfoAttribute : Attribute
     {
         public string DisplayName = null;
         public string NodeName { get; private set; }
         private (float, float, float)? _color = null;
+        public int Order;
 
         public GorkNodeInfoAttribute() { }
 
-        public GorkNodeInfoAttribute(string displayName)
+        public GorkNodeInfoAttribute(string name)
         {
-            DisplayName = displayName;
+            DisplayName = name;
 
-            string[] split = displayName.Split('/');
+            string[] split = name.Split('/');
             NodeName = split[split.Length - 1];
         }
 
-        public GorkNodeInfoAttribute(string displayName, (float, float, float) color)
+        public GorkNodeInfoAttribute(string name, int order) : this(name)
         {
-            DisplayName = displayName;
+            Order = order;
+        }
 
-            string[] split = displayName.Split('/');
-            NodeName = split[split.Length - 1];
-
+        public GorkNodeInfoAttribute(string name, (float, float, float) color) : this(name)
+        {
             _color = color;
         }
 
-        public GorkNodeInfoAttribute(string displayName, string hexadecimalColor)
+        public GorkNodeInfoAttribute(string name, (float, float, float) color, int order) : this(name, color)
         {
-            DisplayName = displayName;
+            Order = order;
+        }
 
-            string[] split = displayName.Split('/');
-            NodeName = split[split.Length - 1];
-
+        public GorkNodeInfoAttribute(string name, string hexadecimalColor) : this(name)
+        {
             if (!hexadecimalColor.StartsWith('#'))
             {
                 hexadecimalColor = $"#{hexadecimalColor}";
@@ -57,6 +59,11 @@ namespace Gork
             {
                 _color = (color.r, color.g, color.b);
             }
+        }
+
+        public GorkNodeInfoAttribute(string name, string hexadecimalColor, int order) : this(name, hexadecimalColor)
+        {
+            Order = order;
         }
 
         public Color? GetColor()
@@ -86,7 +93,7 @@ namespace Gork
         /// <summary>
         /// A static <see cref="Dictionary{TKey, TValue}"/> of all the <see cref="Type"/> that have a <see cref="GorkNodeInfoAttribute"/> attached.
         /// </summary>
-        public static Dictionary<Type, GorkNodeInfoAttribute> TypeAttributes = new Dictionary<Type, GorkNodeInfoAttribute>();
+        public static Dictionary<Type, List<GorkNodeInfoAttribute>> TypeAttributes = new Dictionary<Type, List<GorkNodeInfoAttribute>>();
 
         [InitializeOnLoadMethod]
         private static void CacheTypes()
@@ -97,14 +104,23 @@ namespace Gork
             foreach (Type type in TypeCache.GetTypesWithAttribute<GorkNodeInfoAttribute>())
             {
                 // Get the attribute
-                GorkNodeInfoAttribute attribute = type.GetCustomAttribute<GorkNodeInfoAttribute>();
+                IEnumerable<GorkNodeInfoAttribute> attributes = type.GetCustomAttributes<GorkNodeInfoAttribute>();
 
-                // Add the attribute to the list
-                attributeList.Add(attribute);
+                foreach (GorkNodeInfoAttribute attribute in attributes)
+                {
+                    // Add the attribute to the list
+                    attributeList.Add(attribute);
 
-                // Also add the attribute and type to the Dictionaries
-                AttributeTypes.Add(attribute, type);
-                TypeAttributes.Add(type, attribute);
+                    // Also add the attribute and type to the Dictionaries
+                    AttributeTypes.Add(attribute, type);
+
+                    if (!TypeAttributes.ContainsKey(type))
+                    {
+                        TypeAttributes.Add(type, new List<GorkNodeInfoAttribute>());
+                    }
+
+                    TypeAttributes[type].Add(attribute);
+                }
             }
 
             // Save our list as an array

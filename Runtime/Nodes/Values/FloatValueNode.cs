@@ -1,25 +1,27 @@
+using System;
 #if UNITY_EDITOR
 using UnityEditor;
 using UnityEditor.Experimental.GraphView;
+using UnityEditor.UIElements;
 using UnityEngine.UIElements;
 #endif
 
 namespace Gork
 {
     /// <summary>
-    /// Is a constant <see cref="bool"/> value.
+    /// Gives out either a constant or parameter <see cref="float"/> value.
     /// </summary>
-    [GorkNodeInfo("Constant/Constant Bool", GorkColors.BOOL_COLOR)]
+    [GorkNodeInfo("Values/Float Value", GorkColors.FLOAT_COLOR)]
     [NoInputPorts]
-    [GorkOutputPort("Value", typeof(bool), false)]
-    public class ConstantBoolNode : GorkNode
+    [GorkOutputPort("Value", typeof(float), false)]
+    public class FloatValueNode : GorkNode
     {
-        public bool Value;
+        public float Value;
 
 #if UNITY_EDITOR
         public override void Initialize(Node node)
         {
-            Toggle field = new Toggle();
+            FloatField field = new FloatField();
             field.value = Value;
             field.RegisterValueChangedCallback(data =>
             {
@@ -32,7 +34,7 @@ namespace Gork
         }
 #endif
 
-        public override bool BoolCall(int port)
+        public override float FloatCall(int port)
         {
             return Value;
         }

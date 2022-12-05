@@ -1,4 +1,3 @@
-using System;
 #if UNITY_EDITOR
 using UnityEditor;
 using UnityEditor.Experimental.GraphView;
@@ -9,19 +8,19 @@ using UnityEngine.UIElements;
 namespace Gork
 {
     /// <summary>
-    /// Is a constant <see cref="float"/> value.
+    /// Gives out either a constant or parameter <see cref="int"/> value.
     /// </summary>
-    [GorkNodeInfo("Constant/Constant Float", GorkColors.FLOAT_COLOR)]
+    [GorkNodeInfo("Values/Int Value", GorkColors.INT_COLOR)]
     [NoInputPorts]
-    [GorkOutputPort("Value", typeof(float), false)]
-    public class ConstantFloatNode : GorkNode
+    [GorkOutputPort("Value", typeof(int), false)]
+    public class IntValueNode : GorkNode
     {
-        public float Value;
+        public int Value;
 
 #if UNITY_EDITOR
         public override void Initialize(Node node)
         {
-            FloatField field = new FloatField();
+            IntegerField field = new IntegerField();
             field.value = Value;
             field.RegisterValueChangedCallback(data =>
             {
@@ -34,7 +33,7 @@ namespace Gork
         }
 #endif
 
-        public override float FloatCall(int port)
+        public override int IntCall(int port)
         {
             return Value;
         }

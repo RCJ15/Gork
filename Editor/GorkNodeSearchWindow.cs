@@ -126,10 +126,10 @@ namespace Gork.Editor
                 entry.level = entryTitle.Length;
                 entry.userData = new Action<Vector2>(pos =>
                 {
-                    string displayName = GorkNodeInfoAttribute.TypeAttributes.ContainsKey(nodeType) ? GorkNodeInfoAttribute.TypeAttributes[nodeType].NodeName : nodeType.Name;
+                    string displayName = attribute.NodeName;
                     Undo.RecordObject(GraphView.Graph, $"Created {displayName}");
 
-                    GorkNodeView nodeView = GraphView.CreateNode(nodeType, pos);
+                    GorkNodeView nodeView = GraphView.CreateNode(nodeType, pos, attribute);
 
                     if (EdgePort != null)
                     {

@@ -6,13 +6,13 @@ namespace Gork
     /// Will simply invert a <see cref="bool"/> from true to false or false to true.
     /// </summary>
     [GorkNodeInfo("Operations/Bool Invert", GorkColors.BOOL_COLOR)]
-    [GorkInputPort("Input", typeof(bool), false)]
-    [GorkOutputPort("Result", typeof(bool), false)]
+    [GorkInputPort("", typeof(bool), false)]
+    [GorkOutputPort("", typeof(bool), false)]
     public class BoolInvertNode : GorkNode
     {
         public override bool BoolCall(int port)
         {
-            return GetValueFromPort<bool>(0);
+            return !GetValueFromPort<bool>(0);
         }
     }
 }

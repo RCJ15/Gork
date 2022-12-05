@@ -1,4 +1,7 @@
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace Gork
 {
@@ -7,6 +10,7 @@ namespace Gork
     /// </summary>
     [GorkNodeInfo("Tools/Debug Log", GorkColors.TOOL_COlOR)]
     [GorkInputPort("Trigger")]
+    [GorkInputPort("Data", typeof(object), false)]
     [NoOutputPorts]
     public class DebugLogNode : GorkNode
     {
@@ -19,9 +23,26 @@ namespace Gork
         public override void NodeCall(int port)
         {
             // Debug Log
-            Debug.Log(LogText);
+            if (HasInputConnection(1))
+            {
+                Debug.Log(GetValueFromPort<object>(1));
+            }
+            else
+            {
+                Debug.Log(LogText);
+            }
 
             base.NodeCall(port);
         }
+
+#if UNITY_EDITOR
+        protected override void OnInspectorGUI()
+        {
+            using (new EditorGUI.DisabledScope(HasInputConnection(1)))
+            {
+                base.OnInspectorGUI();
+            }
+        }
+#endif
     }
 }

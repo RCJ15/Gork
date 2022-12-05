@@ -21,7 +21,11 @@ namespace Gork.Editor
         private Type _nodeType;
 
         //-- Attributes
-        private GorkNodeInfoAttribute _attribute = null;
+        private List<GorkNodeInfoAttribute> _attributeList;
+        private GorkNodeInfoAttribute _attribute;
+        private int _attributeID = 0;
+
+        public GorkNodeInfoAttribute Attribute => _attribute;
 
         private GorkPortAttribute[] _inputAttributes = null;
         private GorkPortAttribute[] _outputAttributes = null;
@@ -35,7 +39,7 @@ namespace Gork.Editor
 
         private Label _titleLabel;
         
-        public GorkNodeView(GorkNode node, GorkGraphView graphView, List<FieldData> fieldData = null)
+        public GorkNodeView(GorkNode node, GorkGraphView graphView, GorkNodeInfoAttribute attribute = null, List<FieldData> fieldData = null)
         {
             _titleLabel = titleContainer.Q<Label>(name: "title-label");
 
@@ -48,24 +52,15 @@ namespace Gork.Editor
             _nodeType = Node.GetType();
 
             // Get the GorkNodeInfoAttribute using TryGetValue
-            if (GorkNodeInfoAttribute.TypeAttributes.TryGetValue(_nodeType, out var value))
+            if (GorkNodeInfoAttribute.TypeAttributes.TryGetValue(_nodeType, out var list))
             {
-                _attribute = value;
-
-                // Set background color
-                Color? color = _attribute.GetColor();
-
-                if (color.HasValue)
-                {
-                    titleContainer.style.backgroundColor = color.Value;
-                }
+                _attributeList = list;
             }
+
+            ChangeAttribute(attribute);
 
             // Set our extension container background
             extensionContainer.style.backgroundColor = InspectorBackgroundColor;
-
-            // Set title
-            title = _attribute != null ? _attribute.NodeName : Node.name;
 
             UpdatePosition(Node.Position);
 
@@ -96,10 +91,10 @@ namespace Gork.Editor
             {
                 Node.InputPorts.Clear();
 
-                foreach (GorkInputPortAttribute attribute in _inputAttributes)
+                foreach (GorkInputPortAttribute inputAttribute in _inputAttributes)
                 {
-                    AddInputPort(attribute.PortName, attribute.PortType, attribute.DisplayType);
-                    Node.InputPorts.Add(new GorkNode.Port(attribute.PortName, attribute.PortType, attribute.DisplayType));
+                    AddInputPort(inputAttribute.PortName, inputAttribute.PortType, inputAttribute.DisplayType);
+                    Node.InputPorts.Add(new GorkNode.Port(inputAttribute.PortName, inputAttribute.PortType, inputAttribute.DisplayType));
                 }
             }
 
@@ -107,10 +102,10 @@ namespace Gork.Editor
             {
                 Node.OutputPorts.Clear();
 
-                foreach (GorkOutputPortAttribute attribute in _outputAttributes)
+                foreach (GorkOutputPortAttribute outputAttribute in _outputAttributes)
                 {
-                    AddOutputPort(attribute.PortName, attribute.PortType, attribute.DisplayType);
-                    Node.OutputPorts.Add(new GorkNode.Port(attribute.PortName, attribute.PortType, attribute.DisplayType));
+                    AddOutputPort(outputAttribute.PortName, outputAttribute.PortType, outputAttribute.DisplayType);
+                    Node.OutputPorts.Add(new GorkNode.Port(outputAttribute.PortName, outputAttribute.PortType, outputAttribute.DisplayType));
                 }
             }
 
@@ -134,26 +129,39 @@ namespace Gork.Editor
             Node.OnViewEnable();
 
             UpdateNodeView();
+        }
 
-            /*
-            // Add pending nodes from the node view
-            if (Node.InputPorts != null && Node.InputPorts.Count > 0)
+        private void ChangeAttribute(GorkNodeInfoAttribute attribute)
+        {
+            if (attribute == null)
             {
-                Node.InputPorts.ForEach(n =>
-                {
-                    // Add input port
-                    if (n.Direction == Direction.Input)
-                    {
-                        AddInputPort(n.Name, n.Type);
-                    }
-                    // Add output port
-                    else
-                    {
-                        AddOutputPort(n.Name, n.Type);
-                    }
-                });
+                return;
             }
-            */
+
+            if (_attributeList != null)
+            {
+                _attributeID = _attributeList.IndexOf(attribute);
+            }
+            else
+            {
+                _attributeID = 0;
+            }
+
+            // Save attribute ID
+            Node.AttributeID = _attributeID;
+
+            _attribute = attribute;
+
+            // Set background color
+            Color? color = attribute.GetColor();
+
+            if (color.HasValue)
+            {
+                titleContainer.style.backgroundColor = color.Value;
+            }
+
+            // Set title
+            title = attribute.NodeName;
         }
 
         public void UpdatePosition(Vector2 pos)
@@ -171,62 +179,20 @@ namespace Gork.Editor
             int oldInputPortAmount = InputPorts.Count;
             int oldOutputPortAmount = OutputPorts.Count;
 
-            int inputPortAmount = Node.InputPorts.Count;
-            int outputPortAmount = Node.OutputPorts.Count;
+            int newInputPortAmount = Node.InputPorts.Count;
+            int newOutputPortAmount = Node.OutputPorts.Count;
 
-            void FillPorts(bool isInput, int portAmount, int oldPortAmount, List<GorkNode.Port> portInfos)
+            void FillPorts(bool isInput, int newPortAmount, int oldPortAmount, List<GorkNode.Port> portInfos)
             {
-                int loopAmount = Mathf.Max(portAmount, oldPortAmount);
                 List<GorkPort> list = isInput ? InputPorts : OutputPorts;
-                VisualElement container = isInput ? inputContainer : outputContainer;
 
-                for (int i = 0; i < loopAmount; i++)
+                // Add new ports
+                if (newPortAmount > oldPortAmount)
                 {
-                    if (i >= portAmount)
+                    for (int i = oldPortAmount; i < newPortAmount; i++)
                     {
-                        GorkPort port = list[i];
-                        list.RemoveAt(i);
+                        var portInfo = portInfos[i];
 
-                        List<Action> performLater = new List<Action>();
-
-                        foreach (Edge edge in port.connections)
-                        {
-                            GorkPort inputPort = edge.input as GorkPort;
-                            GorkPort outputPort = edge.output as GorkPort;
-
-                            performLater.Add(() =>
-                            {
-                                inputPort.Disconnect(edge);
-                                outputPort.Disconnect(edge);
-                            });
-
-                            GraphView.RemoveElement(edge);
-                        }
-
-                        foreach (Action action in performLater)
-                        {
-                            action?.Invoke();
-                        }
-
-                        container.Remove(port);
-
-                        Node.RemoveOutputConnections(i);
-                        continue;
-                    }
-
-                    GorkNode.Port portInfo = portInfos[i];
-
-                    if (i < oldPortAmount)
-                    {
-                        GorkPort port = list[i];
-
-                        port.portType = portInfo.Type;
-                        SetPortName(port, portInfo.Name, portInfo.Type, portInfo.DisplayType);
-
-                        port.UpdateColor();
-                    }
-                    else
-                    {
                         GorkPort port;
 
                         if (isInput)
@@ -261,14 +227,59 @@ namespace Gork.Editor
                             }
 
                         }
-
-                        //--
                     }
                 }
+                // Remove ports
+                else if (newPortAmount < oldPortAmount)
+                {
+                    VisualElement container = isInput ? inputContainer : outputContainer;
+
+                    // Do in reverse order
+                    for (int i = oldPortAmount - 1; i >= newPortAmount; i--)
+                    {
+                        GorkPort port = list[i];
+                        list.RemoveAt(i);
+
+                        if (port == null)
+                        {
+                            continue;
+                        }
+
+                        foreach (Edge edge in port.connections)
+                        {
+                            GorkPort inputPort = edge.input as GorkPort;
+                            GorkPort outputPort = edge.output as GorkPort;
+
+                            inputPort.Disconnect(edge);
+                            outputPort.Disconnect(edge);
+
+                            GraphView.RemoveElement(edge);
+                        }
+
+                        Node.RemoveOutputConnections(i);
+
+                        container.Remove(port);
+                    }
+                }
+
+                // Update names of all ports
+                int listCount = list.Count;
+                for (int i = 0; i < listCount; i++)
+                {
+                    var portInfo = portInfos[i];
+                    GorkPort port = list[i];
+
+                    port.portType = portInfo.Type;
+                    SetPortName(port, portInfo.Name, portInfo.Type, portInfo.DisplayType);
+
+                    port.UpdateColor();
+                }
+
+                //--
             }
 
-            FillPorts(true, inputPortAmount, oldInputPortAmount, Node.InputPorts);
-            FillPorts(false, outputPortAmount, oldOutputPortAmount, Node.OutputPorts);
+            FillPorts(true, newInputPortAmount, oldInputPortAmount, Node.InputPorts);
+            FillPorts(false, newOutputPortAmount, oldOutputPortAmount, Node.OutputPorts);
         }
 
         public override void BuildContextualMenu(ContextualMenuPopulateEvent evt)
@@ -470,7 +481,7 @@ namespace Gork.Editor
         private static void SetPortName(GorkPort port, string name, Type type, bool displayType = true)
         {
             // Set the name
-            port.portName = displayType && type != GorkPortAttribute.DefaultType ? $"{name} ({GetTypeName(type)})" : name;
+            port.portName = displayType && !type.IsSignal() ? $"{name} ({GetTypeName(type)})" : name;
         }
 
         private static string GetTypeName(Type type)
@@ -509,6 +520,7 @@ namespace Gork.Editor
             GUID = Node.GUID,
             Position = Node.Position,
             NodeType = _nodeType.AssemblyQualifiedName,
+            AttributeID = _attributeID,
             FieldData = GetFieldData(),
         };
 
@@ -536,6 +548,7 @@ namespace Gork.Editor
             public string GUID;
             public Vector2 Position;
             public string NodeType;
+            public int AttributeID;
             public List<FieldData> FieldData;
         }
 
@@ -622,10 +635,6 @@ namespace Gork.Editor
         [Serializable]
         public class FieldData
         {
-            // These two static MethodInfos are for when we convert to and from json
-            private static readonly MethodInfo _toJsonMethod = typeof(FieldData).GetMethod("ToJson", BindingFlags.Static | BindingFlags.NonPublic);
-            private static readonly MethodInfo _fromJsonMethod = typeof(FieldData).GetMethod("FromJson", BindingFlags.Static | BindingFlags.NonPublic);
-
             // Actual serialized values
             public string Name;
             public string Value;
@@ -638,9 +647,8 @@ namespace Gork.Editor
                 // Set the name
                 Name = fieldname;
 
-                // Turn the object data into string using Reflection and JsonUtility
-                MethodInfo genericMethod = _toJsonMethod.MakeGenericMethod(objType);
-                Value = genericMethod.Invoke(null, new object[] { obj }) as string;
+                // Turn the object data into string using GorkEditorUtility
+                Value = GorkUtility.ToJson(obj, objType);
             }
 
             /// <summary>
@@ -648,60 +656,8 @@ namespace Gork.Editor
             /// </summary>
             public object GetValue(Type objType)
             {
-                // Deserialize our json by using Reflection once again
-                MethodInfo genericMethod = _fromJsonMethod.MakeGenericMethod(objType);
-
-                return genericMethod.Invoke(null, new object[] { Value });
-            }
-
-            #region The methods that do all the magic
-            /// <summary>
-            /// Will convert a <paramref name="obj"/> into json and return the result. <para/>
-            /// This is not meant to be used on it's own but is supposed to be used with Reflections <see cref="MethodInfo.MakeGenericMethod(Type[])"/> to turn a generic <see cref="object"/> into a <see cref="string"/>. (Given it's serializable)
-            /// </summary>
-            private static string ToJson<T>(T obj)
-            {
-                // Use ValueHolder<T> as just converting the object for some reason doesn't work
-                // This is a strange workaround but it works
-                string json = JsonUtility.ToJson(new ValueHolder<T>(obj));
-
-                // Cut off the start and ending parts of the json conversion to keep the json clean
-                int startLength = ValueHolder<T>.START.Length;
-                json = json.Substring(startLength, json.Length - startLength - ValueHolder<T>.END.Length);
-
-                // Return the json
-                return json;
-            }
-
-            /// <summary>
-            /// Will convert a json into a new <see cref="object"/> and return the result. <para/>
-            /// This is not meant to be used on it's own but is supposed to be used with Reflections <see cref="MethodInfo.MakeGenericMethod(Type[])"/> to turn a <see cref="string"/> into a generic <see cref="object"/>. (Given it's serializable)
-            /// </summary>
-            private static T FromJson<T>(string json)
-            {
-                // Add the start and end parts of the json back. These parts were cut in ToJson<T>()
-                json = $"{ValueHolder<T>.START}{json}{ValueHolder<T>.END}";
-
-                // Return the json value
-                return JsonUtility.FromJson<ValueHolder<T>>(json).V;
-            }
-            #endregion
-
-            /// <summary>
-            /// Class that a value for <see cref="FieldData"/>. In short, this is used to convert anything serializable into a <see cref="string"/>.
-            /// </summary>
-            [Serializable]
-            public class ValueHolder<T>
-            {
-                public static readonly string START = $"{{\"{nameof(V)}\":";
-                public const string END = "}";
-
-                public T V;
-
-                public ValueHolder(T obj)
-                {
-                    V = obj;
-                }
+                // Deserialize our json by using GorkEditorUtility
+                return GorkUtility.FromJson(Value, objType);
             }
         }
         #endregion
