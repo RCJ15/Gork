@@ -1,7 +1,7 @@
 namespace Gork
 {
     /// <summary>
-    /// Will stop all threads in a <see cref="GorkGraph"/>.
+    /// Will stop all threads in a <see cref="GorkGraph"/> when triggered.
     /// </summary>
     [GorkNodeInfo("Entries & Exits/Stop", GorkColors.ENTRY_COLOR, 1)]
     [NoOutputPorts]

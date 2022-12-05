@@ -9,7 +9,7 @@ using UnityEngine.UIElements;
 namespace Gork
 {
     /// <summary>
-    /// 
+    /// Will give out a Gork Parameter value to connected nodes via a <see cref="string"/> value for Parameter name.
     /// </summary>
     [GorkNodeInfo("Parameter/Float Parameter", GorkColors.FLOAT_COLOR, 0)]
     [GorkNodeInfo("Parameter/Int Parameter", GorkColors.INT_COLOR, 1)]

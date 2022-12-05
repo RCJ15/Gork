@@ -7,7 +7,7 @@ using UnityEngine.UIElements;
 namespace Gork
 {
     /// <summary>
-    /// Gives out either a constant or parameter <see cref="string"/> value.
+    /// Gives a constant <see cref="string"/> value.
     /// </summary>
     [GorkNodeInfo("Values/String Value", GorkColors.STRING_COLOR, 3)]
     [NoInputPorts]

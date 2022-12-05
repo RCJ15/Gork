@@ -9,7 +9,7 @@ using UnityEngine.UIElements;
 namespace Gork
 {
     /// <summary>
-    /// Gives out either a constant or parameter <see cref="float"/> value.
+    /// Gives a constant <see cref="float"/> value.
     /// </summary>
     [GorkNodeInfo("Values/Float Value", GorkColors.FLOAT_COLOR, 0)]
     [NoInputPorts]

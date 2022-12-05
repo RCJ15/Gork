@@ -9,7 +9,8 @@ using UnityEngine;
 namespace Gork
 {
     /// <summary>
-    /// 
+    /// Uses <see cref="string.Format(string, object[])"/> and will give the output of the method. <para/>
+    /// This node will automatically detect if you have put a "{0}" or "{391}" in your text and will add dynamically add an input port for each unique "{0}" it can find.
     /// </summary>
     [GorkNodeInfo("Operations/String Format", GorkColors.STRING_COLOR, 100)]
     [GorkInputPort("Input", typeof(string), false)]

@@ -5,8 +5,7 @@ using UnityEngine;
 namespace Gork
 {
     /// <summary>
-    /// Simply just a collection of a bunch of constant hexadecimal color strings for <see cref="GorkNode"/>. <para/>
-    /// You probably won't need to use this script...
+    /// Simply just a collection of a bunch of constant hexadecimal color strings for <see cref="GorkNode"/>.
     /// </summary>
     public class GorkColors
     {

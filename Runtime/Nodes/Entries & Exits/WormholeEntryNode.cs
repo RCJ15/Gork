@@ -8,7 +8,7 @@ using UnityEngine.UIElements;
 namespace Gork
 {
     /// <summary>
-    /// A node that will transport it's signal to a <see cref="WormholeExitNode"/> with the same key. Use this to fix spaghetti connections or make Functions that will be called multiple times.
+    /// A node that will transport it's signal to a <see cref="WormholeExitNode"/> with the same key. Use this to fix spaghetti connections and create reusable "functions" in your graphs
     /// </summary>
     [GorkNodeInfo("Entries & Exits/Wormhole Entry", GorkColors.WORMHOLE_COLOR, 10)]
     [GorkInputPort("Signal")]

@@ -9,74 +9,83 @@ using UnityEditor;
 namespace Gork
 {
     /// <summary>
-    /// 
+    /// Compares a number with another number and gives out a <see cref="bool"/> if the comparison was true or false.
     /// </summary>
-    [GorkNodeInfo("Operations/Number Comparison", GorkColors.FLOAT_COLOR, -1)]
-    [GorkInputPort("Number 1", typeof(float), false)]
-    [GorkInputPort("Number 2", typeof(float), false)]
-    [GorkOutputPort("Result", typeof(bool))]
+    [GorkNodeInfo("Operations/Comparisons/Number Equals (==)", GorkColors.FLOAT_COLOR, -6)]
+    [GorkNodeInfo("Operations/Comparisons/Number Not Equals (!=)", GorkColors.FLOAT_COLOR, -5)]
+    [GorkNodeInfo("Operations/Comparisons/Number Greater Than (>)", GorkColors.FLOAT_COLOR, -4)]
+    [GorkNodeInfo("Operations/Comparisons/Number Smaller Than (<)", GorkColors.FLOAT_COLOR, -3)]
+    [GorkNodeInfo("Operations/Comparisons/Number Greater Equals (>=)", GorkColors.FLOAT_COLOR, -2)]
+    [GorkNodeInfo("Operations/Comparisons/Number Smaller Equals (<=)", GorkColors.FLOAT_COLOR, -1)]
+    [GorkInputPort("X", typeof(float), false)]
+    [GorkInputPort("Y", typeof(float), false)]
+    [GorkOutputPort("Result", typeof(bool), false)]
     public class NumberComparisonNode : GorkNode
     {
-        public Mode ComparisonMode;
-
-        [Serializable]
-        public enum Mode
-        {
-            Equals,
-            GreaterThan,
-            SmallerThan,
-            GreaterEquals,
-            SmallerEquals,
-        }
-
 #if UNITY_EDITOR
-        private static readonly GUIContent[] _enumOptions = new GUIContent[]
+        public override void OnViewEnable()
         {
-            new GUIContent("Equals (=)"),
-            new GUIContent("Greater Than (>)"),
-            new GUIContent("Smaller Than (<)"),
-            new GUIContent("Greater Equals (>=)"),
-            new GUIContent("Smaller Equals (<=)"),
-        };
+            switch (AttributeID)
+            {
+                default:
+                    Title = "Equals (==)";
+                    break;
 
-        protected override void OnInspectorGUI()
-        {
-            SetupInspector();
+                case 1:
+                    Title = "Not Equals (!=)";
+                    break;
 
-            EditorGUILayout.LabelField("Comparison Mode");
+                case 2:
+                    Title = "Greater Than (>)";
+                    break;
 
-            SerializedProperty prop = serializedObject.FindProperty("ComparisonMode");
+                case 3:
+                    Title = "Smaller Than (<)";
+                    break;
 
-            prop.enumValueIndex = EditorGUILayout.Popup(prop.enumValueIndex, _enumOptions);
+                case 4:
+                    Title = "Greater Equals (>=)";
+                    break;
 
-            serializedObject.ApplyModifiedProperties();
+                case 5:
+                    Title = "Smaller Equals (<=)";
+                    break;
+            }
+
+            UpdateNodeView();
         }
 #endif
+
         public override bool BoolCall(int port)
         {
-            float val1 = GetValueFromPort<float>(0);
-            float val2 = GetValueFromPort<float>(1);
+            float value1 = GetValueFromPort<float>(0);
+            float value2 = GetValueFromPort<float>(1);
 
-            switch (ComparisonMode)
+            switch (AttributeID)
             {
-                case Mode.Equals:
-                    return val1 == val2;
-
-                case Mode.GreaterThan:
-                    return val1 > val2;
-
-                case Mode.SmallerThan:
-                    return val1 < val2;
-
-                case Mode.GreaterEquals:
-                    return val1 >= val2;
-
-                case Mode.SmallerEquals:
-                    return val1 <= val2;
-
-                // ???
+                // Default to Equals (==)
                 default:
-                    return true;
+                    return value1 == value2;
+
+                // Not Equals (!=)
+                case 1:
+                    return value1 != value2;
+
+                // Greater Than (>)
+                case 2:
+                    return value1 > value2;
+
+                // Smaller Than (<)
+                case 3:
+                    return value1 < value2;
+
+                // Greater Equals (>=)
+                case 4:
+                    return value1 >= value2;
+
+                // Smaller Equals (<=)
+                case 5:
+                    return value1 <= value2;
             }
         }
     }
