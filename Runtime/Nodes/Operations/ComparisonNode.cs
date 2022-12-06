@@ -1,7 +1,8 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using System;
+using UnityEngine.UIElements;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -9,10 +10,10 @@ using UnityEditor;
 namespace Gork
 {
     /// <summary>
-    /// Compares a number with another number and gives out a <see cref="bool"/> if the comparison was true or false.
+    /// Compares it's two input ports with eachother and give out a <see cref="bool"/> if the comparison was true or false.
     /// </summary>
-    [GorkNodeInfo("Operations/Comparisons/Number Equals (==)", GorkColors.FLOAT_COLOR, -6)]
-    [GorkNodeInfo("Operations/Comparisons/Number Not Equals (!=)", GorkColors.FLOAT_COLOR, -5)]
+    [GorkNodeInfo("Operations/Comparisons/Equals (==)", GorkColors.BOOL_COLOR, -6)]
+    [GorkNodeInfo("Operations/Comparisons/Not Equals (!=)", GorkColors.BOOL_COLOR, -5)]
     [GorkNodeInfo("Operations/Comparisons/Number Greater Than (>)", GorkColors.FLOAT_COLOR, -4)]
     [GorkNodeInfo("Operations/Comparisons/Number Smaller Than (<)", GorkColors.FLOAT_COLOR, -3)]
     [GorkNodeInfo("Operations/Comparisons/Number Greater Equals (>=)", GorkColors.FLOAT_COLOR, -2)]
@@ -20,11 +21,34 @@ namespace Gork
     [GorkInputPort("X", typeof(float), false)]
     [GorkInputPort("Y", typeof(float), false)]
     [GorkOutputPort("Result", typeof(bool), false)]
-    public class NumberComparisonNode : GorkNode
+    public class ComparisonNode : GorkNode
     {
+        protected override void BuildInputTypesList(List<Type> list)
+        {
+            // Equals and Not Equals
+            if (AttributeID < 2)
+            {
+                list.Add(typeof(object));
+                list.Add(typeof(object));
+
+                return;
+            }
+
+            // Number comparisons
+            list.Add(typeof(float));
+            list.Add(typeof(float));
+        }
+
 #if UNITY_EDITOR
         public override void OnViewEnable()
         {
+            // Equals and Not Equals
+            if (AttributeID < 2)
+            {
+                SetInputPort(0, "X", typeof(object));
+                SetInputPort(1, "Y", typeof(object));
+            }
+
             switch (AttributeID)
             {
                 default:
@@ -58,21 +82,30 @@ namespace Gork
 
         public override bool BoolCall(int port)
         {
+            // Equals and Not Equals
+            if (AttributeID < 2)
+            {
+                object obj1 = GetValueFromPort<object>(0);
+                object obj2 = GetValueFromPort<object>(1);
+
+                switch (AttributeID)
+                {
+                    default:
+                        return obj1 == obj2;
+
+                    case 1:
+                        return obj1 != obj2;
+                }
+            }
+
+            // Number comparisons
             float value1 = GetValueFromPort<float>(0);
             float value2 = GetValueFromPort<float>(1);
 
             switch (AttributeID)
             {
-                // Default to Equals (==)
+                // Default to Greater Than (>)
                 default:
-                    return value1 == value2;
-
-                // Not Equals (!=)
-                case 1:
-                    return value1 != value2;
-
-                // Greater Than (>)
-                case 2:
                     return value1 > value2;
 
                 // Smaller Than (<)

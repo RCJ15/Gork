@@ -11,10 +11,10 @@ namespace Gork
     /// <summary>
     /// Will give out a Gork Parameter value to connected nodes via a <see cref="string"/> value for Parameter name.
     /// </summary>
-    [GorkNodeInfo("Parameter/Float Parameter", GorkColors.FLOAT_COLOR, 0)]
-    [GorkNodeInfo("Parameter/Int Parameter", GorkColors.INT_COLOR, 1)]
-    [GorkNodeInfo("Parameter/Bool Parameter", GorkColors.BOOL_COLOR, 2)]
-    [GorkNodeInfo("Parameter/String Parameter", GorkColors.STRING_COLOR, 3)]
+    [GorkNodeInfo("Values/Parameter/Float Parameter", GorkColors.FLOAT_COLOR, 0)]
+    [GorkNodeInfo("Values/Parameter/Int Parameter", GorkColors.INT_COLOR, 1)]
+    [GorkNodeInfo("Values/Parameter/Bool Parameter", GorkColors.BOOL_COLOR, 2)]
+    [GorkNodeInfo("Values/Parameter/String Parameter", GorkColors.STRING_COLOR, 3)]
     [NoInputPorts]
     public class ParameterNode : GorkNode
     {

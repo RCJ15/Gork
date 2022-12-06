@@ -57,17 +57,21 @@ namespace Gork.Editor
 
                 for (int i = 0; i < split1Length; i++)
                 {
-                    if (i >= splits2.Length)
+                    if (i >= split2Length)
                     {
                         return compareValue;
                     }
+
+                    int value; //= splits1[i].CompareTo(splits2[i]);
 
                     if (i == split1Length - 1)
                     {
-                        return compareValue;
+                        value = compareValue;
                     }
-
-                    int value = splits1[i].CompareTo(splits2[i]);
+                    else
+                    {
+                        value = splits1[i].CompareTo(splits2[i]);
+                    }
 
                     if (value != 0)
                     {
