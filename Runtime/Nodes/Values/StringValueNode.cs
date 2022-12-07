@@ -21,6 +21,7 @@ namespace Gork
         {
             TextField field = new TextField();
             field.value = Value;
+            field.multiline = false;
             field.RegisterValueChangedCallback(data =>
             {
                 Undo.RecordObject(this, $"Modified Property in {name}");

@@ -134,6 +134,7 @@ namespace Gork.Editor
                     // If so, then bring up a context menu
                     GenericMenu menu = new GenericMenu();
 
+                    menu.AddItem(new GUIContent("Duplicate"), false, () => DuplicateParameter(i));
                     menu.AddItem(new GUIContent("Delete"), false, () => RemoveParameter(i));
 
                     menu.ShowAsContext();
@@ -144,16 +145,43 @@ namespace Gork.Editor
             // Nothing was right clicked :(
         }
 
+        private void DuplicateParameter(int index)
+        {
+            _rects.Add(new Rect());
+
+            // Get properties
+            SerializedProperty prop = ParametersList.serializedProperty;
+            SerializedProperty copiedProp = prop.GetArrayElementAtIndex(index);
+
+            // Create the new paramter
+            prop.InsertArrayElementAtIndex(index);
+            SerializedProperty newProp = prop.GetArrayElementAtIndex(index + 1);
+
+            // Copy values from the original property
+            string startName = copiedProp.FindPropertyRelative("Name").stringValue;
+            newProp.FindPropertyRelative("Name").stringValue = GetUniqueParameterName(startName, index + 1);
+            newProp.FindPropertyRelative("Type").enumValueIndex = copiedProp.FindPropertyRelative("Type").enumValueIndex;
+            newProp.FindPropertyRelative("Value").stringValue = copiedProp.FindPropertyRelative("Value").stringValue;
+
+            GraphSerializedObject.ApplyModifiedProperties();
+
+            // Select the new parameter
+            ParametersList.Select(index + 1);
+        }
+
         private void RemoveParameter(int index)
         {
             // Remove a parameter from the parameter list
             _rects.RemoveAt(index);
 
+            // Delete the array element
             ParametersList.serializedProperty.DeleteArrayElementAtIndex(index);
             GraphSerializedObject.ApplyModifiedProperties();
 
+            // Select the new last element if the index is out of range
             if (ParametersList.count <= index)
             {
+                // Ensure that the count is above 0
                 ParametersList.Select(Mathf.Max(index - 1, 0));
             }
         }
@@ -301,11 +329,6 @@ namespace Gork.Editor
 
                 // Filter!
                 _searchFilterString = text.newValue;
-
-                if (placeholderText.visible)
-                {
-                    return;
-                }
 
                 UpdateParametersSearchList();
             });
@@ -504,19 +527,18 @@ namespace Gork.Editor
 
                 SerializedProperty nameProp = arrayElement.FindPropertyRelative("Name");
 
-                arrayNames.Add(nameProp.stringValue);
+                arrayNames.Add(nameProp.stringValue.ToLower());
             }
 
             // Do while loop to determine if the name is unique or not
             int loopAmount = 0;
 
             // Remove numbers and whitespace at the end of the name
-            string trimmedName = startName.TrimEnd('0', '1', '2', '3', '4', '5', '6', '7', '8', '9').TrimEnd();
-
+            string trimmedName = startName.TrimEnd().TrimEnd('0', '1', '2', '3', '4', '5', '6', '7', '8', '9').TrimEnd();
             do
             {
                 // Name is NOT in array name list?
-                if (!arrayNames.Contains(name))
+                if (!arrayNames.Contains(name.ToLower()))
                 {
                     break;
                 }
@@ -672,8 +694,8 @@ namespace Gork.Editor
 
             // Text field
             Rect textFieldRect = rect;
-            textFieldRect.y += textFieldRect.height / 2 - 9;
-            textFieldRect.height = 18;
+            textFieldRect.height = rect.height - 9;
+            textFieldRect.y += (rect.height - textFieldRect.height) / 2;
             textFieldRect.width -= 160;
             textFieldRect.width = Mathf.Clamp(textFieldRect.width, 50, 300);
 
@@ -702,8 +724,8 @@ namespace Gork.Editor
 
             #region Value field
             Rect valueFieldRect = rect;
-            valueFieldRect.y += valueFieldRect.height / 2 - 9;
-            valueFieldRect.height = 18;
+            valueFieldRect.height = rect.height - 9;
+            valueFieldRect.y += (rect.height - valueFieldRect.height) / 2;
 
             textFieldRect.width += 10;
 
@@ -740,7 +762,7 @@ namespace Gork.Editor
                     valueProp.stringValue = GorkUtility.ToJson(EditorGUI.Toggle(valueFieldRect, (bool)value), actualType);
                     break;
                 default:
-                    valueProp.stringValue = EditorGUI.TextField(valueFieldRect, (string)value);
+                    valueProp.stringValue = EditorGUI.TextArea(valueFieldRect, (string)value);
                     break;
             }
             #endregion

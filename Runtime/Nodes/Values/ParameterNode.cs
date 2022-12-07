@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.Experimental.GraphView;
 using UnityEngine.UIElements;
+using UnityEngine;
 #endif
 
 namespace Gork
@@ -45,7 +46,9 @@ namespace Gork
 #if UNITY_EDITOR
         public override void Initialize(Node node)
         {
+            /*
             TextField field = new TextField();
+            field.multiline = false;
             field.value = ParameterName;
             field.RegisterValueChangedCallback(data =>
             {
@@ -54,6 +57,10 @@ namespace Gork
             });
 
             node.inputContainer.Add(field);
+            node.RefreshExpandedState();
+            */
+
+            node.inputContainer.Add(IMGUIContainer);
             node.RefreshExpandedState();
         }
 
@@ -82,6 +89,58 @@ namespace Gork
 
             SetOutputPort(0, "Value", type, false);
             UpdateNodeView();
+        }
+
+        protected override void OnInspectorGUI()
+        {
+            // Do button
+            if (!EditorGUILayout.DropdownButton(new GUIContent(ParameterName), FocusType.Keyboard))
+            {
+                // This is when the button is not pressed
+                return;
+            }
+
+            // Button has been pressed
+
+            // Get the name property
+            SerializedProperty prop = serializedObject.FindProperty(nameof(ParameterName));
+            string propValue = prop.stringValue;
+            GorkGraph.DataType type = (GorkGraph.DataType)AttributeID;
+
+            // Create an empty generic menu which will be our dropdown menu
+            GenericMenu menu = new GenericMenu();
+
+            // Loop through all parameters
+            foreach (GorkGraph.Parameter parameter in Graph.Parameters)
+            {
+                // Ignore parameters without the same type
+                if (parameter.Type != type)
+                {
+                    continue;
+                }
+
+                string name = parameter.Name;
+                bool on = propValue == name;
+
+                // Add the menu item
+                menu.AddItem(new GUIContent(name), on, () =>
+                {
+                    // Do nothing if the parameter is already set to this value
+                    if (on)
+                    {
+                        return;
+                    }
+
+                    // Set name value and apply the changes
+                    prop.stringValue = name;
+                    serializedObject.ApplyModifiedProperties();
+                });
+            }
+
+            // Display the menu as a dropdown menu at the correct position
+            Rect rect = EditorGUILayout.GetControlRect();
+            rect.y += 18;
+            menu.DropDown(rect);
         }
 #endif
 

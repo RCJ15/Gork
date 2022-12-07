@@ -201,6 +201,21 @@ namespace Gork
         #endregion
 
         #region IMGUI Drawing
+        private IMGUIContainer _IMGUIContainer;
+        protected IMGUIContainer IMGUIContainer
+        {
+            get
+            {
+                if (_IMGUIContainer == null)
+                {
+                    _IMGUIContainer = new IMGUIContainer(IMGUIOnGUIHandler);
+                }
+
+                return _IMGUIContainer;
+            }
+        }
+        protected virtual Action IMGUIOnGUIHandler => OnInspectorGUI;
+
         private Editor _editor;
         protected Editor editor
         {
@@ -268,12 +283,7 @@ namespace Gork
         /// </summary>
         protected virtual void Draw(List<VisualElement> elements)
         {
-            elements.Add(CreateInspector());
-        }
-
-        protected IMGUIContainer CreateInspector()
-        {
-            return new IMGUIContainer(OnInspectorGUI);
+            elements.Add(IMGUIContainer);
         }
 
         /// <summary>
