@@ -109,33 +109,14 @@ namespace Gork
         #endregion
 
         #region Extension Methods
+        public static Type SignalType =>  GorkGraph.SignalType;
+
         /// <summary>
         /// Returns if this <see cref="Type"/> is a Gork Signal or not.
         /// </summary>
         public static bool IsSignal(this Type type)
         {
-            return type == GorkPortAttribute.DefaultType;
-        }
-
-        /// <summary>
-        /// Returns the actual <see cref="Type"/> of this <see cref="GorkGraph.DataType"/>.
-        /// </summary>
-        public static Type ActualType(this GorkGraph.DataType Type)
-        {
-            // Hard coded :/
-            switch (Type)
-            {
-                case GorkGraph.DataType.Float:
-                    return typeof(float);
-                case GorkGraph.DataType.Int:
-                    return typeof(int);
-                case GorkGraph.DataType.Bool:
-                    return typeof(bool);
-                case GorkGraph.DataType.String:
-                    return typeof(string);
-                default:
-                    return null;
-            }
+            return type == SignalType;
         }
         #endregion
     }

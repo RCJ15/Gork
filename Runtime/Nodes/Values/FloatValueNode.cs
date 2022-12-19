@@ -13,24 +13,35 @@ namespace Gork
     /// </summary>
     [GorkNodeInfo("Values/Float Value", GorkColors.FLOAT_COLOR, 0)]
     [NoInputPorts]
-    [GorkOutputPort("Value", typeof(float), false)]
+    [GorkOutputPort("Value", typeof(float))]
     public class FloatValueNode : GorkNode
     {
         public float Value;
 
 #if UNITY_EDITOR
+        private FloatField _field;
+
         public override void Initialize(Node node)
         {
-            FloatField field = new FloatField();
-            field.value = Value;
-            field.RegisterValueChangedCallback(data =>
+            _field = new FloatField();
+            _field.value = Value;
+            _field.RegisterValueChangedCallback(data =>
             {
                 Undo.RecordObject(this, $"Modified Property in {name}");
                 Value = data.newValue;
             });
 
-            node.inputContainer.Add(field);
-            node.RefreshExpandedState();
+            OnExpand();
+        }
+
+        public override void OnCollapse()
+        {
+            NodeView.inputContainer.Remove(_field);
+        }
+
+        public override void OnExpand()
+        {
+            NodeView.inputContainer.Add(_field);
         }
 #endif
 

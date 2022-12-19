@@ -10,9 +10,9 @@ namespace Gork
     [GorkNodeInfo("Logic/Logic Gate (AND)", GorkColors.BOOL_COLOR, 1)]
     [GorkNodeInfo("Logic/Logic Gate (OR)", GorkColors.BOOL_COLOR, 2)]
     [GorkNodeInfo("Logic/Logic Gate (XOR)", GorkColors.BOOL_COLOR, 3)]
-    [GorkInputPort("X", typeof(bool), false)]
-    [GorkInputPort("Y", typeof(bool), false)]
-    [GorkOutputPort("Result", typeof(bool), false)]
+    [GorkInputPort("X", typeof(bool))]
+    [GorkInputPort("Y", typeof(bool))]
+    [GorkOutputPort("Result", typeof(bool))]
     public class LogicGateNode : GorkNode
     {
 #if UNITY_EDITOR

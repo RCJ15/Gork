@@ -110,6 +110,7 @@ namespace Gork.Editor
                 }
 
                 Type nodeType = GorkNodeInfoAttribute.AttributeTypes[attribute];
+                int attributeID = GorkNodeInfoAttribute.TypeAttributes[nodeType].IndexOf(attribute);
 
                 GUIContent content = new GUIContent(attribute.NodeName);
 
@@ -140,7 +141,7 @@ namespace Gork.Editor
                     string displayName = attribute.NodeName;
                     Undo.RecordObject(GraphView.Graph, $"Created {displayName}");
 
-                    GorkNodeView nodeView = GraphView.CreateNode(nodeType, pos, attribute);
+                    GorkNodeView nodeView = GraphView.CreateNode(nodeType, pos, attributeID);
 
                     if (EdgePort != null)
                     {

@@ -1,4 +1,5 @@
 #if UNITY_EDITOR
+using System.Linq;
 using UnityEditor;
 using UnityEditor.Experimental.GraphView;
 using UnityEngine.UIElements;
@@ -11,24 +12,36 @@ namespace Gork
     /// </summary>
     [GorkNodeInfo("Values/Bool Value", GorkColors.BOOL_COLOR, 2)]
     [NoInputPorts]
-    [GorkOutputPort("Value", typeof(bool), false)]
+    [GorkOutputPort("Value", typeof(bool))]
     public class BoolValueNode : GorkNode
     {
         public bool Value;
 
 #if UNITY_EDITOR
+        private Toggle _field;
         public override void Initialize(Node node)
         {
-            Toggle field = new Toggle();
-            field.value = Value;
-            field.RegisterValueChangedCallback(data =>
+            _field = new Toggle();
+            _field.style.alignSelf = Align.Center;
+
+            _field.value = Value;
+            _field.RegisterValueChangedCallback(data =>
             {
                 Undo.RecordObject(this, $"Modified Property in {name}");
                 Value = data.newValue;
             });
 
-            node.inputContainer.Add(field);
-            node.RefreshExpandedState();
+            OnExpand();
+        }
+
+        public override void OnCollapse()
+        {
+            NodeView.inputContainer.Remove(_field);
+        }
+
+        public override void OnExpand()
+        {
+            NodeView.inputContainer.Add(_field);
         }
 #endif
 

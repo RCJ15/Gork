@@ -135,33 +135,18 @@ namespace Gork
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = true, Inherited = false)]
     public class GorkPortAttribute : Attribute
     {
-        public static readonly Type DefaultType = typeof(DummyClass);
-
-        private class DummyClass { }
-
         public string PortName = "Input";
-        public Type PortType = DefaultType;
-        public bool DisplayType = true;
-
-        public GorkPortAttribute(string portName)
-        {
-            PortName = portName;
-            PortType = DefaultType;
-        }
+        public Type PortType = GorkUtility.SignalType;
 
         public GorkPortAttribute(string portName, Type portType)
         {
             PortName = portName;
-            PortType = DefaultType;
             PortType = portType;
         }
 
-        public GorkPortAttribute(string portName, Type portType, bool displayType)
+        public GorkPortAttribute(string portName) : this(portName, GorkUtility.SignalType)
         {
-            PortName = portName;
-            PortType = DefaultType;
-            PortType = portType;
-            DisplayType = displayType;
+
         }
     }
 
@@ -171,11 +156,10 @@ namespace Gork
     /// </summary>
     public class GorkInputPortAttribute : GorkPortAttribute
     {
-        public static readonly GorkPortAttribute[] TemplatePortArray = new GorkInputPortAttribute[] { new GorkInputPortAttribute("Input", DefaultType, true) };
+        public static readonly GorkPortAttribute[] TemplatePortArray = new GorkInputPortAttribute[] { new GorkInputPortAttribute("Input", GorkUtility.SignalType) };
 
         public GorkInputPortAttribute(string portName) : base(portName) { }
         public GorkInputPortAttribute(string portName, Type portType) : base(portName, portType) { }
-        public GorkInputPortAttribute(string portName, Type portType, bool displayType) : base(portName, portType, displayType) { }
 
 #if UNITY_EDITOR
         /// <summary>
@@ -205,11 +189,10 @@ namespace Gork
     /// </summary>
     public class GorkOutputPortAttribute : GorkPortAttribute
     {
-        public static readonly GorkPortAttribute[] TemplatePortArray = new GorkOutputPortAttribute[] { new GorkOutputPortAttribute("Output", DefaultType, true) };
+        public static readonly GorkPortAttribute[] TemplatePortArray = new GorkOutputPortAttribute[] { new GorkOutputPortAttribute("Output", GorkUtility.SignalType) };
 
         public GorkOutputPortAttribute(string portName) : base(portName) { }
         public GorkOutputPortAttribute(string portName, Type portType) : base(portName, portType) { }
-        public GorkOutputPortAttribute(string portName, Type portType, bool displayType) : base(portName, portType, displayType) { }
 
 #if UNITY_EDITOR
         /// <summary>

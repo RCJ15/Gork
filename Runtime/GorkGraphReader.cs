@@ -101,6 +101,7 @@ namespace Gork
             // Subscribe to the GorkGraph
             graph.OnNodeCalled += StartNode;
             graph.OnGraphStop += StopGraph;
+            graph.OnNodeStop += StopNode;
 
             // Send a signal through all StartNodes
             foreach (StartNode node in startNodes)
@@ -110,12 +111,31 @@ namespace Gork
         }
 
         /// <summary>
-        /// Starts a coroutine from the node
+        /// Starts a coroutine from the node.
         /// </summary>
         public virtual void StartNode(GorkNode node, int port)
         {
             activeCoroutines.Add(node, StartCoroutine(NodeCoroutine(node, port)));
             coroutineCount++;
+        }
+
+        /// <summary>
+        /// Stops a currently active coroutine from the node.
+        /// </summary>
+        public virtual void StopNode(GorkNode node)
+        {
+            if (!activeCoroutines.TryGetValue(node, out Coroutine coroutine))
+            {
+                return;
+            }
+
+            Debug.Log("Stopped " + node.name);
+
+            StopCoroutine(coroutine);
+
+            activeCoroutines.Remove(node);
+
+            coroutineCount--;
         }
 
         public virtual void StopGraph()

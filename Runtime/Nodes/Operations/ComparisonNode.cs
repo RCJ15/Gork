@@ -18,9 +18,9 @@ namespace Gork
     [GorkNodeInfo("Operations/Comparisons/Number Smaller Than (<)", GorkColors.FLOAT_COLOR, -3)]
     [GorkNodeInfo("Operations/Comparisons/Number Greater Equals (>=)", GorkColors.FLOAT_COLOR, -2)]
     [GorkNodeInfo("Operations/Comparisons/Number Smaller Equals (<=)", GorkColors.FLOAT_COLOR, -1)]
-    [GorkInputPort("X", typeof(float), false)]
-    [GorkInputPort("Y", typeof(float), false)]
-    [GorkOutputPort("Result", typeof(bool), false)]
+    [GorkInputPort("X", typeof(float))]
+    [GorkInputPort("Y", typeof(float))]
+    [GorkOutputPort("Result", typeof(bool))]
     public class ComparisonNode : GorkNode
     {
         protected override void BuildInputTypesList(List<Type> list)

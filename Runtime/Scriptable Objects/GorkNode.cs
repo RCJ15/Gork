@@ -7,7 +7,6 @@ using System.Reflection;
 #if UNITY_EDITOR
 using UnityEditor;
 using UnityEngine.UIElements;
-using UnityEditor.UIElements;
 using UnityEditor.Experimental.GraphView;
 #endif
 
@@ -22,6 +21,7 @@ namespace Gork
         [DontSaveInGorkGraph] [HideInInspector] public string GUID;
         [DontSaveInGorkGraph] [HideInInspector] public Vector2 Position; // The position in the graph
         [DontSaveInGorkGraph] [HideInInspector] public int AttributeID = 0;
+        [HideInInspector] public bool Expanded = true;
 
         private string _title;
         /// <summary>
@@ -39,19 +39,11 @@ namespace Gork
         {
             public string Name;
             public Type Type;
-            public bool DisplayType  = true;
 
             public Port(string name, Type type)
             {
                 Name = name;
                 Type = type;
-            }
-
-            public Port(string name, Type type, bool displayType)
-            {
-                Name = name;
-                Type = type;
-                DisplayType = displayType;
             }
         }
 
@@ -68,7 +60,7 @@ namespace Gork
 
             for (int i = count; i < index + 1; i++)
             {
-                port = new Port(defaultName, GorkPortAttribute.DefaultType);
+                port = new Port(defaultName, GorkUtility.SignalType);
                 ports.Add(port);
             }
 
@@ -116,16 +108,6 @@ namespace Gork
             });
         }
 
-        protected void SetInputPort(int index, string name, Type type, bool displayType)
-        {
-            SetInputPort(index, port =>
-            {
-                port.Name = name;
-                port.Type = type;
-                port.DisplayType = displayType;
-            });
-        }
-
         protected void DeleteInputPort(int index)
         {
             if (index < 0 || index > InputPorts.Count - 1)
@@ -160,16 +142,6 @@ namespace Gork
             {
                 port.Name = name;
                 port.Type = type;
-            });
-        }
-
-        protected void SetOutputPort(int index, string name, Type type, bool displayType)
-        {
-            SetOutputPort(index, port =>
-            {
-                port.Name = name;
-                port.Type = type;
-                port.DisplayType = displayType;
             });
         }
 
@@ -233,23 +205,7 @@ namespace Gork
         protected SerializedObject serializedObject => editor.serializedObject;
         #endregion
 
-        #region GorkGraph
-        [SerializeField] [HideInInspector] private GorkGraph _graph;
-        public GorkGraph Graph
-        {
-            get
-            {
-#if UNITY_EDITOR
-                if (_graph == null)
-                {
-                    _graph = AssetDatabase.LoadMainAssetAtPath(AssetDatabase.GetAssetPath(this)) as GorkGraph;
-                }
-#endif
-
-                return _graph;
-            }
-        }
-        #endregion
+        [DontSaveInGorkGraph] [HideInInspector] public Node NodeView;
 
         /// <summary>
         /// Override this method for total control over the way that this <see cref="GorkNode"/> is drawn in the editor. <para/>
@@ -294,10 +250,26 @@ namespace Gork
 
         }
 
+        /// <summary>
+        /// Is called when the Node View is collapsed.
+        /// </summary>
+        public virtual void OnCollapse()
+        {
+
+        }
+
+        /// <summary>
+        /// Is called when the Node View is expanded.
+        /// </summary>
+        public virtual void OnExpand()
+        {
+
+        }
+
         private const string SCRIPT_PROP = "m_Script";
 
-        public virtual float InspectorLabelWidth => 150;
-        public virtual float InspectorFieldWidth => 50;
+        public virtual float InspectorLabelWidth => 50;
+        public virtual float InspectorFieldWidth => 150;
 
         /// <summary>
         /// Override this method to draw custom inspector elements on the <see cref="GorkNode"/> using Unitys IMGUI system. <para/>
@@ -382,6 +354,73 @@ namespace Gork
         /// Returns the <see cref="string"/> parameter with the given <paramref name="name"/>.
         /// </summary>
         protected string GetStringParameter(string name) => Graph.GetString(name);
+        #endregion
+
+        #region GorkGraph
+        [SerializeField] [HideInInspector] private GorkGraph _graph;
+        public GorkGraph Graph
+        {
+            get
+            {
+#if UNITY_EDITOR
+                if (_graph == null)
+                {
+                    _graph = AssetDatabase.LoadMainAssetAtPath(AssetDatabase.GetAssetPath(this)) as GorkGraph;
+                }
+#endif
+
+                return _graph;
+            }
+        }
+        #endregion
+
+        #region Tag
+        [SerializeField] [HideInInspector] private List<string> _tags = new List<string>();
+#if UNITY_EDITOR
+        [HideInInspector] private bool _sortedTags;
+#endif
+        public List<string> Tags
+        {
+            get
+            {
+#if UNITY_EDITOR
+                if (!_sortedTags)
+                {
+                    List<string> newList = new List<string>();
+
+                    foreach (string tag in _tags)
+                    {
+                        if (newList.Contains(tag))
+                        {
+                            continue;
+                        }
+
+                        newList.Add(tag);
+                    }
+
+                    _sortedTags = true;
+                }
+#endif
+
+                return _tags;
+            }
+        }
+
+        public void AddTag(string tag)
+        {
+#if UNITY_EDITOR
+            Undo.RecordObject(this, $"Added tag \"{tag}\"");
+#endif
+            _tags.Add(tag);
+        }
+
+        public void RemoveTag(string tag)
+        {
+#if UNITY_EDITOR
+            Undo.RecordObject(this, $"Removed tag \"{tag}\"");
+#endif
+            _tags.RemoveAll(entry => entry == tag);
+        }
         #endregion
 
         /// <summary>
@@ -812,7 +851,7 @@ namespace Gork
 
                         if (count == 0)
                         {
-                            list.Add(GorkPortAttribute.DefaultType);
+                            list.Add(GorkUtility.SignalType);
                         }
                     }
 

@@ -13,8 +13,8 @@ namespace Gork
     /// This node will automatically detect if you have put a "{0}" or "{391}" in your text and will add dynamically add an input port for each unique "{0}" it can find.
     /// </summary>
     [GorkNodeInfo("Operations/String Format", GorkColors.STRING_COLOR, 100)]
-    [GorkInputPort("Input", typeof(string), false)]
-    [GorkOutputPort("Result", typeof(string), false)]
+    [GorkInputPort("Input", typeof(string))]
+    [GorkOutputPort("Result", typeof(string))]
     public class StringFormatNode : GorkNode
     {
         [TextArea(3, 6)]
@@ -116,7 +116,7 @@ namespace Gork
                     continue;
                 }
 
-                SetInputPort(i, $"{{{argIds[i]}}}", typeof(string), false);
+                SetInputPort(i, $"{{{argIds[i]}}}", typeof(string));
             }
 
             if (removalStartIndex.HasValue)

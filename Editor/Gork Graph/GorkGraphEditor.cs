@@ -25,7 +25,7 @@ namespace Gork.Editor
                     return _path;
                 }
 
-                foreach (var guid in AssetDatabase.FindAssets($"{nameof(GorkGraphEditor)} t: MonoScript"))
+                foreach (string guid in AssetDatabase.FindAssets($"{nameof(GorkGraphEditor)} t: MonoScript"))
                 {
                     _path = AssetDatabase.GUIDToAssetPath(guid);
 
@@ -46,6 +46,17 @@ namespace Gork.Editor
         public static string GetPath(string extension)
         {
             return Path.ChangeExtension(GorkPath, extension);
+        }
+
+        public static VisualTreeAsset GetVisualTree(string fileName)
+        {
+            string path = GorkPath;
+            int lastSlashIndex = path.LastIndexOf('/');
+
+            path = path.Substring(0, lastSlashIndex + 1);
+            path = Path.Combine(path, $"{fileName}.uxml");
+
+            return AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(path);
         }
         #endregion
 
@@ -87,10 +98,10 @@ namespace Gork.Editor
             VisualElement root = rootVisualElement;
 
             // Import UXML
-            var visualTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(GetPath("uxml"));
+            VisualTreeAsset visualTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(GetPath("uxml"));
             visualTree.CloneTree(root);
 
-            var styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(GetPath("uss"));
+            StyleSheet styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(GetPath("uss"));
             root.styleSheets.Add(styleSheet);
 
             // Get our components
@@ -189,7 +200,7 @@ namespace Gork.Editor
             }
             #endregion
 
-            minimapEyeballIcon.SetTexture(_eyeballCloseTexture);
+            minimapEyeballIcon.style.backgroundImage = _eyeballCloseTexture;
             minimapHighlight.visible = false;
 
             // Toggle Minimap
@@ -199,7 +210,7 @@ namespace Gork.Editor
 
                 bool minimapVisible = _graphView.MiniMap.visible;
 
-                minimapEyeballIcon.SetTexture(minimapVisible ? _eyeballOpenTexture : _eyeballCloseTexture);
+                minimapEyeballIcon.style.backgroundImage = minimapVisible ? _eyeballOpenTexture : _eyeballCloseTexture;
                 minimapHighlight.visible = minimapVisible;
             };
             #endregion
@@ -292,8 +303,23 @@ namespace Gork.Editor
 
         private void OnDestroy()
         {
-            Undo.undoRedoPerformed -= _graphView.OnUndoRedo;
-            Undo.undoRedoPerformed -= _inspectorView.OnUndoRedo;
+            try
+            {
+                Undo.undoRedoPerformed -= _graphView.OnUndoRedo;
+            }
+            catch (Exception)
+            {
+                // What
+            }
+
+            try
+            {
+                Undo.undoRedoPerformed -= _inspectorView.OnUndoRedo;
+            }
+            catch (Exception)
+            {
+                // What
+            }
         }
 
         private void OpenExisting()

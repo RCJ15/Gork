@@ -10,8 +10,8 @@ namespace Gork
     [GorkNodeInfo("Operations/Rounding/Round", GorkColors.INT_COLOR, 0)]
     [GorkNodeInfo("Operations/Rounding/Floor", GorkColors.INT_COLOR, 1)]
     [GorkNodeInfo("Operations/Rounding/Ceil", GorkColors.INT_COLOR, 2)]
-    [GorkInputPort("", typeof(float), false)]
-    [GorkOutputPort("", typeof(int), false)]
+    [GorkInputPort("", typeof(float))]
+    [GorkOutputPort("", typeof(int))]
     public class RoundNumberNode : GorkNode
     {
         public override int IntCall(int port)

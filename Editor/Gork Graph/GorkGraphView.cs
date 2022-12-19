@@ -116,6 +116,7 @@ namespace Gork.Editor
             //Debug.Log(evt.commandName);
 
             PasteData pasteData = null;
+            bool duplicated = false;
 
             //-- Copy & Paste
             if (evt.commandName == "Copy")
@@ -135,6 +136,7 @@ namespace Gork.Editor
             else if (evt.commandName == "Duplicate")
             {
                 Duplicate(ref pasteData);
+                duplicated = true;
             }
             //-- Misc
             // Select All
@@ -176,6 +178,11 @@ namespace Gork.Editor
                 {
                     RemoveElement(element);
                 }
+            }
+
+            if (duplicated)
+            {
+                return;
             }
 
             TryAddPasteDataToClipboard(pasteData);
@@ -254,11 +261,8 @@ namespace Gork.Editor
             // Create all nodes in the GraphView by looping through all of the nodes in the graph
             Graph.Nodes.ForEach(node =>
             {
-                Type nodeType = node.GetType();
-                GorkNodeInfoAttribute attribute = GorkNodeInfoAttribute.TypeAttributes.ContainsKey(nodeType) ? GorkNodeInfoAttribute.TypeAttributes[nodeType][node.AttributeID] : null;
-
                 // Create the node view
-                GorkNodeView nodeView = CreateNodeView(node, attribute);
+                GorkNodeView nodeView = CreateNodeView(node, node.AttributeID);
             });
 
             // Create all the edges (connections) by looping through all of the nodes in the graph again
@@ -313,6 +317,8 @@ namespace Gork.Editor
                     }
                 }
             });
+
+            Graph.Nodes.ForEach(node => GetNodeView(node).SetExpanded());
 
             // Create gork groups
             Graph.GorkGroups.ForEach(groupData =>
@@ -476,14 +482,17 @@ namespace Gork.Editor
 
         public override void BuildContextualMenu(ContextualMenuPopulateEvent evt)
         {
+            DropdownMenu menu = evt.menu;
+
             // Add seperator if the menu already has some elements
-            if (evt.menu.MenuItems().Count > 0)
+            if (menu.MenuItems().Count > 0)
             {
-                evt.menu.AppendSeparator();
+                return;
+                //menu.AppendSeparator();
             }
 
             //base.BuildContextualMenu(evt);
-            
+
             Vector2 graphMousePos = viewTransform.matrix.inverse.MultiplyPoint(evt.localMousePosition);
             Vector2 guiMousePos = GUIUtility.GUIToScreenPoint(Event.current.mousePosition);
 
@@ -555,28 +564,91 @@ namespace Gork.Editor
             {
                 if (nodes != null || edges != null || groups != null)
                 {
-                    evt.menu.AppendSeparator();
+                    menu.AppendSeparator();
                 }
             }
 
             // Add seperator
             AddNodeSeperator();
 
+            // Add a toggle to display tags on nodes
+            menu.AppendAction("Display Tags", _ =>
+            {
+                GorkNodeView.DisplayTags = !GorkNodeView.DisplayTags;
+
+                // Update all the nodes in the graph
+                foreach (GorkNodeView node in graphElements.OfType<GorkNodeView>())
+                {
+                    node.UpdateTagSize();
+                }
+
+            }, GorkNodeView.DisplayTags ? DropdownMenuAction.Status.Checked : DropdownMenuAction.Status.Normal);
+
             PasteData pasteData = null;
 
             // Add options for gork node view
             if (nodes != null)
             {
-                // Add options to remove connection(s)
-                evt.menu.AppendAction("Disconnect Input Ports", _ => nodes.ForEach(n => n.DisconnectInputPorts()));
-                evt.menu.AppendAction("Disconnect Output Ports", _ => nodes.ForEach(n => n.DisconnectOutputPorts()));
-                evt.menu.AppendAction("Disconnect All", _ => nodes.ForEach(n => n.DisconnectAll()));
+                bool singleNode = nodes.Count == 1;
 
+                foreach (string tag in Graph.Tags)
+                {
+                    bool containsTag = true;
+
+                    if (singleNode)
+                    {
+                        containsTag = nodes[0].Node.Tags.Contains(tag);
+                    }
+                    else
+                    {
+                        foreach (GorkNodeView node in nodes)
+                        {
+                            if (node.Node.Tags.Contains(tag))
+                            {
+                                continue;
+                            }
+
+                            containsTag = false;
+                            break;
+                        }
+                    }
+
+                    menu.AppendAction($"Tags/{tag}", item =>
+                    {
+                        if (singleNode)
+                        {
+                            if (containsTag)
+                            {
+                                nodes[0].RemoveTag(tag);
+                            }
+                            else
+                            {
+                                nodes[0].AddTag(tag);
+                            }
+                            return;
+                        }
+
+                        if (containsTag)
+                        {
+                            nodes.ForEach(n => n.RemoveTag(tag));
+                        }
+                        else
+                        {
+                            nodes.ForEach(n => n.AddTag(tag));
+                        }
+                    }, containsTag ? DropdownMenuAction.Status.Checked : DropdownMenuAction.Status.Normal);
+                }
+
+                // Add options to remove connection(s)
+                menu.AppendAction("Ports/Disconnect Inputs", _ => nodes.ForEach(n => n.DisconnectInputPorts()));
+                menu.AppendAction("Ports/Disconnect Outputs", _ => nodes.ForEach(n => n.DisconnectOutputPorts()));
+                menu.AppendAction("Ports/Disconnect All", _ => nodes.ForEach(n => n.DisconnectAll()));
+                
                 // Add a seperator
-                evt.menu.AppendSeparator();
+                menu.AppendSeparator();
 
                 // Add options to delete the gork node(s)
-                evt.menu.AppendAction("Delete", _ => nodes.ForEach(n => n.Delete()));
+                menu.AppendAction("Delete", _ => nodes.ForEach(n => n.Delete()));
 
                 bool insideGroup = false;
 
@@ -592,7 +664,7 @@ namespace Gork.Editor
                 }
 
                 // Add option to remove nodes from groups
-                evt.menu.AppendAction("Remove from group", _ => nodes.ForEach(n =>
+                menu.AppendAction("Remove from group", _ => nodes.ForEach(n =>
                 {
                     Undo.RecordObject(Graph, "Removed Nodes From Group");
 
@@ -626,17 +698,22 @@ namespace Gork.Editor
                     }
 
                 }), !insideGroup ? DropdownMenuAction.Status.Disabled : DropdownMenuAction.Status.Normal);
+
+                if (singleNode)
+                {
+                    nodes[0].AddAttributeContextMenu(menu);
+                }
             }
             // Add options for gork edge
             else if (edges != null)
             {
                 // Add option to delete edge(s)
-                evt.menu.AppendAction("Delete", _ => edges.ForEach(e => e.Delete()));
+                menu.AppendAction("Delete", _ => edges.ForEach(e => e.Delete()));
             }
             else if (groups != null)
             {
                 // Add option to delete group(s)
-                evt.menu.AppendAction("Delete", _ =>
+                menu.AppendAction("Delete", _ =>
                 {
                     GraphViewChange change = new GraphViewChange() { elementsToRemove = new List<GraphElement>() };
 
@@ -650,19 +727,18 @@ namespace Gork.Editor
 
             #region Copy Paste Magic
             // Add a seperator
-            evt.menu.AppendSeparator();
+            menu.AppendSeparator();
 
             bool nothingSelected = nodes == null && groups == null && edges == null;
 
             // Duplicate
-            evt.menu.AppendAction("Duplicate", _ =>
+            menu.AppendAction("Duplicate", _ =>
             {
                 Duplicate(ref pasteData, nodes, groups, edges);
-
             }, nothingSelected ? DropdownMenuAction.Status.Disabled : DropdownMenuAction.Status.Normal);
 
             // Copy
-            evt.menu.AppendAction("Copy", _ =>
+            menu.AppendAction("Copy", _ =>
             {
                 CopySelection(ref pasteData, nodes);
 
@@ -670,7 +746,7 @@ namespace Gork.Editor
             }, nothingSelected ? DropdownMenuAction.Status.Disabled : DropdownMenuAction.Status.Normal);
 
             // Cut
-            evt.menu.AppendAction("Cut", _ =>
+            menu.AppendAction("Cut", _ =>
             {
                 Cut(ref pasteData, nodes);
 
@@ -693,16 +769,16 @@ namespace Gork.Editor
             Vector2 cachedMousePos = MousePos;
 
             // Paste
-            evt.menu.AppendAction("Paste", _ =>
+            menu.AppendAction("Paste", _ =>
             {
                 Paste(cachedMousePos, clipboardData);
             }, clipboardData == null ? DropdownMenuAction.Status.Disabled : DropdownMenuAction.Status.Normal);
 
-            evt.menu.AppendSeparator();
+            menu.AppendSeparator();
             #endregion
 
             // Add option to create node
-            evt.menu.AppendAction("Create Node", _ =>
+            menu.AppendAction("Create Node", _ =>
             {
                 NodeCreationContext context = new NodeCreationContext() { screenMousePosition = guiMousePos };
 
@@ -711,7 +787,7 @@ namespace Gork.Editor
             });
 
             // Add option to create a group
-            evt.menu.AppendAction("Create Group", _ =>
+            menu.AppendAction("Create Group", _ =>
             {
                 // Create new GorkGroup
                 GorkGroup group = new GorkGroup("New Group", graphMousePos, this);
@@ -791,7 +867,7 @@ namespace Gork.Editor
             return compatiblePorts;
         }
 
-        public GorkNodeView CreateNode(Type nodeType, Vector2 position, GorkNodeInfoAttribute attribute = null, List<GorkNodeView.FieldData> fieldData = null)
+        public GorkNodeView CreateNode(Type nodeType, Vector2 position, int attributeID = 0, List<GorkNodeView.FieldData> fieldData = null)
         {
             if (nodeType == null)
             {
@@ -801,17 +877,17 @@ namespace Gork.Editor
             GorkNode node = Graph.CreateNode(nodeType);
             node.Position = position;
 
-            return CreateNodeView(node, attribute, fieldData);
+            return CreateNodeView(node, attributeID, fieldData);
         }
 
-        private GorkNodeView CreateNodeView(GorkNode node, GorkNodeInfoAttribute attribute = null, List<GorkNodeView.FieldData> fieldData = null)
+        private GorkNodeView CreateNodeView(GorkNode node, int attributeID = 0, List<GorkNodeView.FieldData> fieldData = null)
         {
             if (node == null)
             {
                 return null;
             }
 
-            GorkNodeView nodeView = new GorkNodeView(node, this, attribute, fieldData);
+            GorkNodeView nodeView = new GorkNodeView(node, this, attributeID, fieldData);
 
             AddElement(nodeView);
 
@@ -968,11 +1044,8 @@ namespace Gork.Editor
                     continue;
                 }
 
-                // Determine the attribute which the pasted node will use
-                GorkNodeInfoAttribute attribute = GorkNodeInfoAttribute.TypeAttributes.ContainsKey(nodeType) ? GorkNodeInfoAttribute.TypeAttributes[nodeType][nodeData.AttributeID] : null;
-
                 // Create a new node
-                GorkNodeView nodeView = CreateNode(nodeType, nodeData.Position, attribute, nodeData.FieldData);
+                GorkNodeView nodeView = CreateNode(nodeType, nodeData.Position, nodeData.AttributeID, nodeData.FieldData);
                 //nodeView.LoadFromFieldData(nodeData.FieldData);
 
                 nodes.Add(nodeView);

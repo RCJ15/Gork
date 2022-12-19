@@ -13,20 +13,6 @@ namespace Gork.Editor
     public static class GorkEditorUtility
     {
         /// <summary>
-        /// Extension method which allows easy modification of the background texture on a <see cref="VisualElement"/>.
-        /// </summary>
-        public static void SetTexture(this VisualElement element, Texture2D texture)
-        {
-            StyleBackground styleBackground = element.style.backgroundImage;
-            Background background = styleBackground.value;
-
-            background.texture = texture;
-
-            styleBackground.value = background;
-            element.style.backgroundImage = styleBackground;
-        }
-
-        /// <summary>
         /// Converts and returns a <paramref name="base64"/> string into a <see cref="Texture2D"/>.
         /// </summary>
         public static Texture2D Texture2DFromBase64(string base64)

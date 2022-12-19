@@ -10,7 +10,7 @@ namespace Gork
     /// </summary>
     [GorkNodeInfo("Tools/Debug Log", GorkColors.TOOL_COlOR, 0)]
     [GorkInputPort("Trigger")]
-    [GorkInputPort("Data", typeof(object), false)]
+    [GorkInputPort("Data", typeof(object))]
     [NoOutputPorts]
     public class DebugLogNode : GorkNode
     {

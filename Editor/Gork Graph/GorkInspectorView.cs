@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -18,11 +19,11 @@ namespace Gork.Editor
         private static Texture2D _dropdownTexture = null;
 
         private static GenericMenu _createParameterMenu, _createEventMenu = null;
-
+        
         private ModeEnum _mode;
 
         private string _searchFilterString = "";
-        private GorkGraph.DataType? _parametersSearchFilter = null;
+        private Type _parametersSearchFilter = null;
         private ToolbarPopupSearchField _searchField;
 
         private IMGUIContainer _imguiContainer;
@@ -43,6 +44,7 @@ namespace Gork.Editor
                     _cachedParametersList.drawElementCallback = ParameterListDrawElement;
                     _cachedParametersList.drawHeaderCallback = null;
                     _cachedParametersList.onRemoveCallback = list => RemoveParameter(list.index);
+                    _cachedParametersList.elementHeightCallback = GetParameterElementHeight;
 
                     _cachedParametersList.showDefaultBackground = false;
 
@@ -72,6 +74,15 @@ namespace Gork.Editor
 
                         UpdateParametersSearchList(false);
                     };
+                    _cachedParametersSearchList.elementHeightCallback = i =>
+                    {
+                        if (i < 0 || i >= _parametersSearchFilterList.Count)
+                        {
+                            return _cachedParametersSearchList.elementHeight;
+                        }
+
+                        return GetParameterElementHeight(_parametersSearchFilterList[i]);
+                    };
 
                     _cachedParametersSearchList.showDefaultBackground = false;
 
@@ -83,8 +94,65 @@ namespace Gork.Editor
         }
         #endregion
 
+        #region Tags List
+        private ReorderableList _cachedTagsList;
+        private ReorderableList TagsList
+        {
+            get
+            {
+                // Create and cache list if null
+                if (_cachedTagsList == null)
+                {
+                    SerializedProperty prop = GraphSerializedObject.FindProperty("_tags");
+
+                    _cachedTagsList = new ReorderableList(GraphSerializedObject, prop, true, false, false, true);
+
+                    _cachedTagsList.drawElementCallback = TagListDrawElement;
+                    _cachedTagsList.drawHeaderCallback = null;
+                    _cachedTagsList.onRemoveCallback = list => RemoveTag(list.index);
+
+                    _cachedTagsList.showDefaultBackground = false;
+
+                    _cachedTagsList.elementHeight = LIST_ELEMENT_SIZE;
+                }
+
+                return _cachedTagsList;
+            }
+        }
+        private int? _focusTagElement = null;
+
+        private List<int> _tagsSearchFilterList = new List<int>();
+        private ReorderableList _cachedTagsSearchList;
+        private ReorderableList TagsSearchList
+        {
+            get
+            {
+                if (_cachedTagsSearchList == null)
+                {
+                    _cachedTagsSearchList = new ReorderableList(_tagsSearchFilterList, typeof(int), false, false, false, true);
+
+                    _cachedTagsSearchList.drawElementCallback = (Rect rect, int index, bool isActive, bool isFocused) => TagListDrawElement(rect, _tagsSearchFilterList[index], isActive, isFocused);
+                    _cachedTagsSearchList.drawHeaderCallback = null;
+                    _cachedTagsSearchList.onRemoveCallback = list =>
+                    {
+                        RemoveTag(list.index);
+
+                        UpdateTagsSearchList(false);
+                    };
+
+                    _cachedTagsSearchList.showDefaultBackground = false;
+
+                    _cachedTagsSearchList.elementHeight = LIST_ELEMENT_SIZE;
+                }
+
+                return _cachedTagsSearchList;
+            }
+        }
+        #endregion
+
         private static readonly Color _listBackgroundColor = new Color(1, 1, 1, 0.015686f);
         private static readonly Color _listLineColor = new Color(0, 0, 0, 0.372549f);
+        private static readonly Color _defaultLeftSideColor = new Color(1, 1, 1, 0.1f);
 
         #region Data Type Colors
         private static readonly Color _floatColor = new Color(0.5098f, 0.8745f, 0.886274f);
@@ -99,11 +167,11 @@ namespace Gork.Editor
         
         private Vector2 _scrollPosition;
 
+        private List<Rect> _rects = new List<Rect>();
+
         public GorkGraphView GraphView { get; internal set; }
         private GorkGraph Graph => GraphView?.Graph;
         private SerializedObject GraphSerializedObject => Graph == null ? null : Graph.SerializedObject;
-
-        private List<Rect> _rects = new List<Rect>();
 
         public new class UxmlFactory : UxmlFactory<GorkInspectorView, VisualElement.UxmlTraits> { }
 
@@ -120,8 +188,36 @@ namespace Gork.Editor
                 return;
             }
 
+            // Determine what list we are doing
+            SerializedProperty prop;
+            Action<int> duplicateElement;
+            Action<int> removeElement; 
+
+            switch (_mode)
+            {
+                default:
+                    prop = ParametersList.serializedProperty;
+
+                    duplicateElement = DuplicateParameter;
+                    removeElement = RemoveParameter;
+                    break;
+
+                case ModeEnum.tags:
+                    prop = TagsList.serializedProperty;
+
+                    duplicateElement = DuplicateTag;
+                    removeElement = RemoveTag;
+                    break;
+
+                case ModeEnum.events:
+                    prop = ParametersList.serializedProperty;
+
+                    duplicateElement = DuplicateParameter;
+                    removeElement = RemoveParameter;
+                    break;
+            }
+
             // Loop through every single element in the list
-            SerializedProperty prop = ParametersList.serializedProperty;
             int length = prop.arraySize;
 
             for (int i = 0; i < length; i++)
@@ -134,8 +230,8 @@ namespace Gork.Editor
                     // If so, then bring up a context menu
                     GenericMenu menu = new GenericMenu();
 
-                    menu.AddItem(new GUIContent("Duplicate"), false, () => DuplicateParameter(i));
-                    menu.AddItem(new GUIContent("Delete"), false, () => RemoveParameter(i));
+                    menu.AddItem(new GUIContent("Duplicate"), false, () => duplicateElement?.Invoke(i));
+                    menu.AddItem(new GUIContent("Delete"), false, () => removeElement?.Invoke(i));
 
                     menu.ShowAsContext();
                     break;
@@ -143,47 +239,6 @@ namespace Gork.Editor
             }
 
             // Nothing was right clicked :(
-        }
-
-        private void DuplicateParameter(int index)
-        {
-            _rects.Add(new Rect());
-
-            // Get properties
-            SerializedProperty prop = ParametersList.serializedProperty;
-            SerializedProperty copiedProp = prop.GetArrayElementAtIndex(index);
-
-            // Create the new paramter
-            prop.InsertArrayElementAtIndex(index);
-            SerializedProperty newProp = prop.GetArrayElementAtIndex(index + 1);
-
-            // Copy values from the original property
-            string startName = copiedProp.FindPropertyRelative("Name").stringValue;
-            newProp.FindPropertyRelative("Name").stringValue = GetUniqueParameterName(startName, index + 1);
-            newProp.FindPropertyRelative("Type").enumValueIndex = copiedProp.FindPropertyRelative("Type").enumValueIndex;
-            newProp.FindPropertyRelative("Value").stringValue = copiedProp.FindPropertyRelative("Value").stringValue;
-
-            GraphSerializedObject.ApplyModifiedProperties();
-
-            // Select the new parameter
-            ParametersList.Select(index + 1);
-        }
-
-        private void RemoveParameter(int index)
-        {
-            // Remove a parameter from the parameter list
-            _rects.RemoveAt(index);
-
-            // Delete the array element
-            ParametersList.serializedProperty.DeleteArrayElementAtIndex(index);
-            GraphSerializedObject.ApplyModifiedProperties();
-
-            // Select the new last element if the index is out of range
-            if (ParametersList.count <= index)
-            {
-                // Ensure that the count is above 0
-                ParametersList.Select(Mathf.Max(index - 1, 0));
-            }
         }
 
         public void Initialize(VisualElement root)
@@ -195,21 +250,32 @@ namespace Gork.Editor
 
             // Parameter & event buttons
             ToolbarButton parameterButton = root.Q<ToolbarButton>("Parameters");
+            ToolbarButton tagsButton = root.Q<ToolbarButton>("Tags");
             ToolbarButton eventsButton = root.Q<ToolbarButton>("Events");
 
             VisualElement parameterHighlight = parameterButton.Q<VisualElement>("Highlight");
+            VisualElement tagsHighlight = tagsButton.Q<VisualElement>("Highlight");
             VisualElement eventsHighlight = eventsButton.Q<VisualElement>("Highlight");
 
             void ParameterButtonColorChange()
             {
                 parameterHighlight.visible = true;
+                tagsHighlight.visible = false;
+                eventsHighlight.visible = false;
+            }
+
+            void TagsButtonColorChange()
+            {
+                parameterHighlight.visible = false;
+                tagsHighlight.visible = true;
                 eventsHighlight.visible = false;
             }
 
             void EventsButtonColorChange()
             {
-                eventsHighlight.visible = true;
                 parameterHighlight.visible = false;
+                tagsHighlight.visible = false;
+                eventsHighlight.visible = true;
             }
 
             ParameterButtonColorChange();
@@ -225,8 +291,22 @@ namespace Gork.Editor
 
                 _mode = ModeEnum.parameters;
 
-                // Reset search filter
-                ResetSearchField();
+                UpdateParametersSearchList();
+            };
+
+            tagsButton.clicked += () =>
+            {
+                if (_mode == ModeEnum.tags)
+                {
+                    return;
+                }
+
+                TagsButtonColorChange();
+
+                _mode = ModeEnum.tags;
+
+                _parametersSearchFilter = null;
+                UpdateTagsSearchList();
             };
 
             eventsButton.clicked += () =>
@@ -240,8 +320,7 @@ namespace Gork.Editor
 
                 _mode = ModeEnum.events;
 
-                // Reset search filter
-                ResetSearchField();
+                _parametersSearchFilter = null;
             };
 
             ToolbarButton addButton = root.Q<ToolbarButton>("AddButton");
@@ -254,7 +333,7 @@ namespace Gork.Editor
                 _dropdownTexture = GorkEditorUtility.Texture2DFromBase64(DROPDOWN_ARROW_BASE64);
             }
 
-            addButton.Q<VisualElement>("Image").SetTexture(_dropdownTexture);
+            addButton.Q<VisualElement>("Image").style.backgroundImage = _dropdownTexture;
             #endregion
 
             addButton.clicked += () =>
@@ -268,19 +347,19 @@ namespace Gork.Editor
                     // Add an entry for creating one of each data type
                     _createParameterMenu.AddItem(new GUIContent("Float"), false, () =>
                     {
-                        AddParameterToGraph("New Float", GorkGraph.DataType.Float, 0f);
+                        AddParameterToGraph("New Float", typeof(float), 0f);
                     });
                     _createParameterMenu.AddItem(new GUIContent("Int"), false, () =>
                     {
-                        AddParameterToGraph("New Int", GorkGraph.DataType.Int, 0);
+                        AddParameterToGraph("New Int", typeof(int), 0);
                     });
                     _createParameterMenu.AddItem(new GUIContent("Bool"), false, () =>
                     {
-                        AddParameterToGraph("New Bool", GorkGraph.DataType.Bool, true);
+                        AddParameterToGraph("New Bool", typeof(bool), true);
                     });
                     _createParameterMenu.AddItem(new GUIContent("String"), false, () =>
                     {
-                        AddParameterToGraph("New String", GorkGraph.DataType.String, null);
+                        AddParameterToGraph("New String", typeof(string), null);
                     });
                 }
                 #endregion
@@ -300,10 +379,7 @@ namespace Gork.Editor
                 #endregion
 
                 // Determine where to spawn the dropdown
-                Rect addButtonRect = addButton.contentRect;
-
-                addButtonRect.y += addButtonRect.height * 4;
-                addButtonRect.position -= Vector2.one * 3;
+                Rect addButtonRect = new Rect(addButton.LocalToWorld(Vector2.zero), addButton.contentRect.size * 1.5f);
 
                 // Spawn the correct dropdown based on which mode is currently active
                 switch (_mode)
@@ -311,6 +387,11 @@ namespace Gork.Editor
                     case ModeEnum.parameters:
                         _createParameterMenu.DropDown(addButtonRect);
                         break;
+
+                    case ModeEnum.tags:
+                        AddTagToGraph("New Tag");
+                        break;
+
                     case ModeEnum.events:
                         _createEventMenu.DropDown(addButtonRect);
                         break;
@@ -330,16 +411,25 @@ namespace Gork.Editor
                 // Filter!
                 _searchFilterString = text.newValue;
 
-                UpdateParametersSearchList();
+                switch (_mode)
+                {
+                    case ModeEnum.parameters:
+                        UpdateParametersSearchList();
+                        break;
+
+                    case ModeEnum.tags:
+                        UpdateTagsSearchList();
+                        break;
+
+                    case ModeEnum.events:
+                        break;
+                }
             });
 
             searchFieldButton.clicked += () =>
             {
                 // Determine where to spawn the dropdown
-                Rect searchFieldButtonRect = addButton.contentRect;
-
-                searchFieldButtonRect.y += searchFieldButtonRect.height * 4;
-                searchFieldButtonRect.position -= Vector2.one * 3;
+                Rect searchFieldButtonRect = new Rect(searchFieldButton.LocalToWorld(Vector2.zero), searchFieldButton.contentRect.size * 1.5f);
 
                 // Spawn the correct dropdown based on which mode is currently active
                 // These menus can't be cached since the entries in the menus will display if they are selected or not which can't be edited once the menu is created (stupid Unity thing)
@@ -351,29 +441,29 @@ namespace Gork.Editor
                         GenericMenu filterParametersMenu = new GenericMenu();
 
                         // Add an entry for setting the filter for each data type
-                        filterParametersMenu.AddItem(new GUIContent("Name"), !_parametersSearchFilter.HasValue, () =>
+                        filterParametersMenu.AddItem(new GUIContent("Name"), _parametersSearchFilter == null, () =>
                         {
                             _parametersSearchFilter = null;
                             UpdateParametersSearchList();
                         });
-                        filterParametersMenu.AddItem(new GUIContent("Float"), _parametersSearchFilter.HasValue && _parametersSearchFilter.Value == GorkGraph.DataType.Float, () =>
+                        filterParametersMenu.AddItem(new GUIContent("Float"), _parametersSearchFilter != null && _parametersSearchFilter == typeof(float), () =>
                         {
-                            _parametersSearchFilter = GorkGraph.DataType.Float;
+                            _parametersSearchFilter = typeof(float);
                             UpdateParametersSearchList();
                         });
-                        filterParametersMenu.AddItem(new GUIContent("Int"), _parametersSearchFilter.HasValue && _parametersSearchFilter.Value == GorkGraph.DataType.Int, () =>
+                        filterParametersMenu.AddItem(new GUIContent("Int"), _parametersSearchFilter != null && _parametersSearchFilter == typeof(int), () =>
                         {
-                            _parametersSearchFilter = GorkGraph.DataType.Int;
+                            _parametersSearchFilter = typeof(int);
                             UpdateParametersSearchList();
                         });
-                        filterParametersMenu.AddItem(new GUIContent("Bool"), _parametersSearchFilter.HasValue && _parametersSearchFilter.Value == GorkGraph.DataType.Bool, () =>
+                        filterParametersMenu.AddItem(new GUIContent("Bool"), _parametersSearchFilter != null && _parametersSearchFilter == typeof(bool), () =>
                         {
-                            _parametersSearchFilter = GorkGraph.DataType.Bool;
+                            _parametersSearchFilter = typeof(bool);
                             UpdateParametersSearchList();
                         });
-                        filterParametersMenu.AddItem(new GUIContent("String"), _parametersSearchFilter.HasValue && _parametersSearchFilter.Value == GorkGraph.DataType.String, () =>
+                        filterParametersMenu.AddItem(new GUIContent("String"), _parametersSearchFilter != null && _parametersSearchFilter == typeof(string), () =>
                         {
-                            _parametersSearchFilter = GorkGraph.DataType.String;
+                            _parametersSearchFilter = typeof(string);
                             UpdateParametersSearchList();
                         });
                         #endregion
@@ -388,7 +478,7 @@ namespace Gork.Editor
                         GenericMenu filterEventsMenu = new GenericMenu();
 
                         // Add an entry for setting the filter for each event type
-                        filterEventsMenu.AddItem(new GUIContent("Name"), !_parametersSearchFilter.HasValue, () =>
+                        filterEventsMenu.AddItem(new GUIContent("Name"), _parametersSearchFilter == null, () =>
                         {
                             _parametersSearchFilter = null;
                             UpdateParametersSearchList();
@@ -416,6 +506,271 @@ namespace Gork.Editor
             _scrollPosition = Vector2.zero;
         }
 
+        private void OnGui()
+        {
+            if (GraphSerializedObject == null)
+            {
+                return;
+            }
+
+            if (_mode == ModeEnum.events)
+            {
+                EditorGUILayout.LabelField("Events are a work in progress");
+                return;
+            }
+
+            ReorderableList list;
+            ReorderableList searchList;
+
+            switch (_mode)
+            {
+                default:
+                    list = ParametersList;
+                    searchList = ParametersSearchList;
+                    break;
+
+                case ModeEnum.tags:
+                    list = TagsList;
+                    searchList = TagsSearchList;
+                    break;
+
+                case ModeEnum.events:
+                    list = ParametersList;
+                    searchList = ParametersSearchList;
+                    break;
+            }
+
+            GraphSerializedObject.UpdateIfRequiredOrScript();
+
+            Rect contentRect = _imguiContainer.parent.contentRect;
+
+            bool displaySearchBar = (_mode == ModeEnum.parameters && _parametersSearchFilter != null) || !string.IsNullOrEmpty(_searchFilterString);
+
+            // Position list so the remove button isn't shown as it looks pretty ugly
+            Rect rect = EditorGUILayout.GetControlRect();
+
+            rect.width += 12;
+            rect.x -= 4;
+
+            rect.width += LIST_SIZE_OFFSET;
+
+            // Determine the scroll rect
+            Rect scrollRect = rect;
+            scrollRect.x = contentRect.x;
+            scrollRect.width = 0; // Remove width to make sure the horizontal bar won't appear
+
+            // This is the float which is the size of the entire list, this also accounts for the search list
+            ReorderableList appropriateList = displaySearchBar ? searchList : list;
+
+            float singleElementSize = appropriateList.elementHeight;
+            float listHeight = -singleElementSize;
+
+            int count = appropriateList.count;
+
+            for (int i = 0; i < count; i++)
+            {
+                listHeight += (appropriateList.elementHeightCallback == null ? appropriateList.elementHeight : appropriateList.elementHeightCallback.Invoke(i)) + 2;
+            }
+
+            // Set the height of the scroll rect after we have determined the entire lists height
+            // We also add 36 as that is the size of the bottom bar in the inspector
+            scrollRect.height = listHeight + 36;
+
+            bool displayScrollBar = contentRect.height < scrollRect.height;
+
+            contentRect.height = Mathf.Max(contentRect.height, 50);
+
+            _scrollPosition = GUI.BeginScrollView(contentRect, _scrollPosition, scrollRect);
+
+            // Add spacing as otherwise clicking the list will not function properly
+            // We also add another element size
+            EditorGUILayout.Space(listHeight + singleElementSize);
+
+            if (displayScrollBar)
+            {
+                rect.width -= 12;
+            }
+
+            // Display a search filtered parameter list
+            if (displaySearchBar)
+            {
+                searchList.DoList(rect);
+            }
+            // Display the regular parameters list
+            else
+            {
+                list.DoList(rect);
+            }
+
+            GUI.EndScrollView();
+
+            // Apply the changes and record undo
+            GraphSerializedObject.ApplyModifiedProperties();
+        }
+
+        private string GetUniqueName(string name, SerializedProperty prop, Func<SerializedProperty, string> getName, int? index = null)
+        {
+            string startName = name;
+            List<string> arrayNames = new List<string>();
+
+            // Loop through entire parameter list and add the names to the arrayNames list
+            int length = prop.arraySize;
+
+            for (int i = 0; i < length; i++)
+            {
+                if (index.HasValue && index.Value == i)
+                {
+                    continue;
+                }
+
+                arrayNames.Add(getName.Invoke(prop.GetArrayElementAtIndex(i)).ToLower());
+            }
+
+            // Do while loop to determine if the name is unique or not
+            int loopAmount = 0;
+
+            // Remove numbers and whitespace at the end of the name
+            string trimmedName = startName.TrimEnd().TrimEnd('0', '1', '2', '3', '4', '5', '6', '7', '8', '9').TrimEnd();
+            do
+            {
+                // Name is NOT in array name list?
+                if (!arrayNames.Contains(name.ToLower()))
+                {
+                    // We found a unique name!
+                    break;
+                }
+
+                name = $"{trimmedName} {loopAmount}";
+
+                loopAmount++;
+            }
+            while (loopAmount <= 1000); // Limit to only loop a maximum of 1000 times
+
+            return name;
+        }
+
+        private void SetRect(int index, Rect rect)
+        {
+            // Loop and add to the _rects list until we have enough entries
+            while (index > _rects.Count - 1)
+            {
+                _rects.Add(default);
+            }
+
+            rect.y -= _scrollPosition.y;
+
+            // Set rect for usage in context menu detection
+            _rects[index] = rect;
+        }
+
+        private void DrawListElementLines(Rect rect)
+        {
+            // Draw a top line first so that anything can be drawn above it
+            Rect lineRect = rect;
+            lineRect.height = LIST_LINE_SIZE;
+            lineRect.y -= LIST_LINE_SIZE;
+
+            // Modify horizontally to make sure it covers the entire list and not just the editable area 
+            lineRect.x -= Screen.width;
+            lineRect.width += Screen.width * 2;
+
+            EditorGUI.DrawRect(lineRect, _listLineColor);
+
+            // Draw bottom line by reusing the same rect
+            lineRect.y = rect.y + rect.height;
+
+            EditorGUI.DrawRect(lineRect, _listLineColor);
+        }
+
+        private void DrawLeftSideColor(Rect rect, Color color)
+        {
+            // Move entirely left
+            rect.width = 1000;
+            rect.x -= rect.width;
+
+            EditorGUI.DrawRect(rect, color);
+        }
+
+        #region Parameter GUI
+        private void AddParameterToGraph(string name, Type type, object defaultValue)
+        {
+            name = GetUniqueParameterName(name);
+
+            if (!name.ToLower().Contains(_searchFilterString.ToLower()))
+            {
+                _searchField.value = "";
+            }
+
+            SerializedProperty prop = ParametersList.serializedProperty;
+
+            int index = prop.arraySize;
+            prop.InsertArrayElementAtIndex(index);
+
+            _focusParameterElement = index;
+
+            SerializedProperty newParameter = prop.GetArrayElementAtIndex(index);
+
+            newParameter.FindPropertyRelative("Name").stringValue = name;
+            newParameter.FindPropertyRelative("SerializedType").stringValue = type.AssemblyQualifiedName;
+            newParameter.FindPropertyRelative("Value").stringValue = GorkUtility.ToJson(defaultValue, type);
+
+            // Reset search filter
+            _parametersSearchFilter = null;
+            UpdateParametersSearchList(false);
+
+            GraphSerializedObject.ApplyModifiedProperties();
+
+            _rects.Add(new Rect());
+
+            _scrollPosition = new Vector2(0, (float)ParametersList.elementHeight * (float)index);
+        }
+
+        private void DuplicateParameter(int index)
+        {
+            // Get properties
+            SerializedProperty prop = ParametersList.serializedProperty;
+            SerializedProperty copiedProp = prop.GetArrayElementAtIndex(index);
+
+            // Create the new paramter
+            prop.InsertArrayElementAtIndex(index);
+            SerializedProperty newProp = prop.GetArrayElementAtIndex(index + 1);
+
+            // Copy values from the original property
+            string startName = copiedProp.FindPropertyRelative("Name").stringValue;
+            newProp.FindPropertyRelative("Name").stringValue = GetUniqueParameterName(startName, index + 1);
+            newProp.FindPropertyRelative("SerializedType").stringValue = copiedProp.FindPropertyRelative("SerializedType").stringValue;
+            newProp.FindPropertyRelative("Value").stringValue = copiedProp.FindPropertyRelative("Value").stringValue;
+
+            GraphSerializedObject.ApplyModifiedProperties();
+
+            // Select the new parameter
+            ParametersList.Select(index + 1);
+
+            Vector2 scrollPos = _scrollPosition;
+            UpdateTagsSearchList();
+
+            _scrollPosition = scrollPos;
+        }
+
+        private void RemoveParameter(int index)
+        {
+            // Delete the array element
+            ParametersList.serializedProperty.DeleteArrayElementAtIndex(index);
+            GraphSerializedObject.ApplyModifiedProperties();
+
+            // Select the new last element if the index is out of range
+            if (ParametersList.count <= index)
+            {
+                // Ensure that the count is above 0
+                ParametersList.Select(Mathf.Max(index - 1, 0));
+            }
+
+            Vector2 scrollPos = _scrollPosition;
+            UpdateParametersSearchList();
+
+            _scrollPosition = scrollPos;
+        }
+
         private void UpdateParametersSearchList(bool repaint = true)
         {
             _parametersSearchFilterList.Clear();
@@ -441,16 +796,16 @@ namespace Gork.Editor
                 }
 
                 // Add this index regularly if the search filter type has no value
-                if (!_parametersSearchFilter.HasValue)
+                if (_parametersSearchFilter == null)
                 {
                     _parametersSearchFilterList.Add(i);
                 }
                 // Otherwise we will check and only add the matching DataTypes
                 else
                 {
-                    SerializedProperty typeProp = arrayElement.FindPropertyRelative("Type");
+                    SerializedProperty typeProp = arrayElement.FindPropertyRelative("SerializedType");
 
-                    if (_parametersSearchFilter.Value == (GorkGraph.DataType)typeProp.enumValueIndex)
+                    if (_parametersSearchFilter == Type.GetType(typeProp.stringValue))
                     {
                         _parametersSearchFilterList.Add(i);
                     }
@@ -465,157 +820,11 @@ namespace Gork.Editor
             _scrollPosition = Vector2.zero;
         }
 
-        private void OnGui()
-        {
-            switch (_mode)
-            {
-                case ModeEnum.parameters:
-                    ParameterEditorOnGui();
-                    break;
-
-                case ModeEnum.events:
-                    EventEditorOnGui();
-                    break;
-            }
-        }
-
-        private void AddParameterToGraph(string name, GorkGraph.DataType type, object defaultValue)
-        {
-            name = GetUniqueParameterName(name);
-
-            SerializedProperty prop = ParametersList.serializedProperty;
-
-            int index = prop.arraySize;
-            prop.InsertArrayElementAtIndex(index);
-
-            _focusParameterElement = index;
-
-            SerializedProperty newParameter = prop.GetArrayElementAtIndex(index);
-
-            newParameter.FindPropertyRelative("Name").stringValue = name;
-            newParameter.FindPropertyRelative("Type").enumValueIndex = (int)type;
-            newParameter.FindPropertyRelative("Value").stringValue = GorkUtility.ToJson(defaultValue, type.ActualType());
-
-            // Reset search filter
-            _parametersSearchFilter = null;
-            UpdateParametersSearchList(false);
-
-            GraphSerializedObject.ApplyModifiedProperties();
-
-            _scrollPosition = new Vector2(0, (float)ParametersList.elementHeight * (float)index);
-        }
-
-        #region Parameter GUI
         private string GetUniqueParameterName(string startName, int? index = null)
         {
-            string name = startName;
             SerializedProperty prop = ParametersList.serializedProperty;
 
-            List<string> arrayNames = new List<string>();
-
-            // Loop through entire parameter list and add the names to the arrayNames list
-            int length = prop.arraySize;
-
-            for (int i = 0; i < length; i++)
-            {
-                if (index.HasValue && index.Value == i)
-                {
-                    continue;
-                }
-
-                SerializedProperty arrayElement = prop.GetArrayElementAtIndex(i);
-
-                SerializedProperty nameProp = arrayElement.FindPropertyRelative("Name");
-
-                arrayNames.Add(nameProp.stringValue.ToLower());
-            }
-
-            // Do while loop to determine if the name is unique or not
-            int loopAmount = 0;
-
-            // Remove numbers and whitespace at the end of the name
-            string trimmedName = startName.TrimEnd().TrimEnd('0', '1', '2', '3', '4', '5', '6', '7', '8', '9').TrimEnd();
-            do
-            {
-                // Name is NOT in array name list?
-                if (!arrayNames.Contains(name.ToLower()))
-                {
-                    break;
-                }
-
-                name = $"{trimmedName} {loopAmount}";
-
-                loopAmount++;
-            }
-            while (loopAmount <= 1000); // Limit to only loop a maximum of 1000 times
-
-            return name;
-        }
-
-        private void ParameterEditorOnGui()
-        {
-            if (GraphSerializedObject == null)
-            {
-                return;
-            }
-
-            GraphSerializedObject.UpdateIfRequiredOrScript();
-
-            Rect contentRect = _imguiContainer.parent.contentRect;
-
-            bool displaySearchBar = _parametersSearchFilter.HasValue || !string.IsNullOrEmpty(_searchFilterString);
-
-            // Position list so the remove button isn't shown as it looks pretty ugly
-            Rect rect = EditorGUILayout.GetControlRect();
-
-            rect.width += 12;
-            rect.x -= 4;
-
-            rect.width += LIST_SIZE_OFFSET;
-
-            // Determine the scroll rect
-            Rect scrollRect = rect;
-            scrollRect.x = contentRect.x;
-            scrollRect.width = 0; // Remove width to make sure the horizontal bar won't appear
-
-            // This is the float which is the size of the entire list, this also accounts for the search list
-            float singleElementSize = (float)ParametersList.elementHeight + 2f;
-            float listHeight = ((displaySearchBar ? (float)ParametersSearchList.count : (float)ParametersList.count) - 1) * singleElementSize;
-            
-            // Set the height of the scroll rect after we have determined the entire lists height
-            // We also add 36 as that is the size of the bottom bar in the inspector
-            scrollRect.height = listHeight + 36;
-
-            bool displayScrollBar = contentRect.height < scrollRect.height;
-
-            contentRect.height = Mathf.Max(contentRect.height, 50);
-
-            _scrollPosition = GUI.BeginScrollView(contentRect, _scrollPosition, scrollRect);
-
-            // Add spacing as otherwise clicking the list will not function properly
-            // We also add another element size
-            EditorGUILayout.Space(listHeight + singleElementSize);
-
-            if (displayScrollBar)
-            {
-                rect.width -= 12;
-            }
-
-            // Display a search filtered parameter list
-            if (displaySearchBar)
-            {
-                ParametersSearchList.DoList(rect);
-            }
-            // Display the regular parameters list
-            else
-            {
-                ParametersList.DoList(rect);
-            }
-
-            GUI.EndScrollView();
-
-            // Apply the changes and record undo
-            GraphSerializedObject.ApplyModifiedProperties();
+            return GetUniqueName(startName, prop, prop => prop.FindPropertyRelative("Name").stringValue, index);
         }
 
         private void ParameterListDrawElement(Rect rect, int index, bool isActive, bool isFocused)
@@ -627,38 +836,30 @@ namespace Gork.Editor
             rect.width -= LIST_SIZE_OFFSET + 5;
 
             // Cache the DataType of the array property
-            GorkGraph.DataType type = (GorkGraph.DataType)prop.FindPropertyRelative("Type").enumValueIndex;
+            string typeName = prop.FindPropertyRelative("SerializedType").stringValue;
+            Type type = string.IsNullOrEmpty(typeName) ? null : Type.GetType(typeName);
 
             #region DataType Color
             // Determine DataType color using the DataType of the field
             Color? color = null;
 
-            switch (type)
+            if (type == typeof(float))
             {
-                case GorkGraph.DataType.Float:
-                    color = _floatColor;
-                    break;
-                case GorkGraph.DataType.Int:
-                    color = _intColor;
-                    break;
-                case GorkGraph.DataType.Bool:
-                    color = _boolColor;
-                    break;
-                case GorkGraph.DataType.String:
-                    color = _stringColor;
-                    break;
+                color = _floatColor;
+            }
+            else if (type == typeof(int))
+            {
+                color = _intColor;
+            }
+            else if (type == typeof(bool))
+            {
+                color = _boolColor;
+            }
+            else if (type == typeof(string))
+            {
+                color = _stringColor;
             }
             #endregion
-
-            // Draw a top line first so that anything can be drawn above it
-            Rect topLine = rect;
-            topLine.height = LIST_LINE_SIZE;
-            topLine.y -= LIST_LINE_SIZE;
-
-            topLine.x -= 50000;
-            topLine.width += 100000;
-
-            EditorGUI.DrawRect(topLine, _listLineColor);
 
             #region Draw background color
             Rect rightRect = rect;
@@ -668,25 +869,21 @@ namespace Gork.Editor
 
             EditorGUI.DrawRect(rightRect, _listBackgroundColor);
 
-            // Also draw a rect for the left side. This one is colored!
-            Rect leftRect = rect;
-
-            // Move entirely left
-            leftRect.width = 1000;
-            leftRect.x -= leftRect.width;
+            // Draw a background color to the left side
+            Color leftColor;
 
             if (color.HasValue)
             {
-                Color leftColor = color.Value;
+                leftColor = color.Value;
                 leftColor.a = 0.1f; // Make the color transparent to make it fit in more
-
-                EditorGUI.DrawRect(leftRect, leftColor);
             }
-            // Draw left side with same default background color if the color doesn't have a value
+            // Draw left side with the default left side color if the color doesn't have a value
             else
             {
-                EditorGUI.DrawRect(leftRect, _listBackgroundColor);
+                leftColor = _defaultLeftSideColor;
             }
+
+            DrawLeftSideColor(rect, leftColor);
             #endregion
 
             // Decrease overall height by 1 so we can leave some room for the bottom line
@@ -694,10 +891,10 @@ namespace Gork.Editor
 
             // Text field
             Rect textFieldRect = rect;
-            textFieldRect.height = rect.height - 9;
-            textFieldRect.y += (rect.height - textFieldRect.height) / 2;
+            textFieldRect.height = LIST_ELEMENT_SIZE - 9;
+            textFieldRect.y += (LIST_ELEMENT_SIZE - textFieldRect.height) / 2;
             textFieldRect.width -= 160;
-            textFieldRect.width = Mathf.Clamp(textFieldRect.width, 50, 300);
+            textFieldRect.width = Mathf.Clamp(textFieldRect.width, 50, 250);
 
             // Set a control so we can force focus on this text field if needed
             GUI.SetNextControlName("TextField");
@@ -716,7 +913,7 @@ namespace Gork.Editor
             }
 
             // Prevent setting the name to empty strings
-            if (!string.IsNullOrEmpty(textValue) && textValue != nameProp.stringValue)
+            if (!string.IsNullOrEmpty(textValue.Trim()) && textValue != nameProp.stringValue)
             {
                 // Also ensure the name is unique
                 nameProp.stringValue = GetUniqueParameterName(textValue, index);
@@ -734,49 +931,36 @@ namespace Gork.Editor
             valueFieldRect.x =  Mathf.Max(rect.x + rect.width - valueFieldRect.width, textFieldRect.x + textFieldRect.width);
 
             SerializedProperty valueProp = prop.FindPropertyRelative("Value");
-            Type actualType = type.ActualType();
             object value;
 
-            switch (type)
+            if (type == typeof(string))
             {
-                case GorkGraph.DataType.Float:
-                case GorkGraph.DataType.Int:
-                case GorkGraph.DataType.Bool:
-                    value = GorkUtility.FromJson(valueProp.stringValue, actualType);
-                    break;
-
-                default:
-                    value = valueProp.stringValue;
-                    break;
+                value = valueProp.stringValue;
+            }
+            else
+            {
+                value = GorkUtility.FromJson(valueProp.stringValue, type);
             }
 
-            switch (type)
+            if (type == typeof(float))
             {
-                case GorkGraph.DataType.Float:
-                    valueProp.stringValue = GorkUtility.ToJson(EditorGUI.FloatField(valueFieldRect, (float)value), actualType);
-                    break;
-                case GorkGraph.DataType.Int:
-                    valueProp.stringValue = GorkUtility.ToJson(EditorGUI.IntField(valueFieldRect, (int)value), actualType);
-                    break;
-                case GorkGraph.DataType.Bool:
-                    valueProp.stringValue = GorkUtility.ToJson(EditorGUI.Toggle(valueFieldRect, (bool)value), actualType);
-                    break;
-                default:
-                    valueProp.stringValue = EditorGUI.TextArea(valueFieldRect, (string)value);
-                    break;
+                valueProp.stringValue = GorkUtility.ToJson(EditorGUI.FloatField(valueFieldRect, (float)value), type);
+            }
+            else if (type == typeof(int))
+            {
+                valueProp.stringValue = GorkUtility.ToJson(EditorGUI.IntField(valueFieldRect, (int)value), type);
+            }
+            else if (type == typeof(bool))
+            {
+                valueProp.stringValue = GorkUtility.ToJson(EditorGUI.Toggle(valueFieldRect, (bool)value), type);
+            }
+            else
+            {
+                valueProp.stringValue = EditorGUI.TextArea(valueFieldRect, (string)value);
             }
             #endregion
 
-            // Draw bottom line
-            Rect bottomLine = rect;
-            bottomLine.height = LIST_LINE_SIZE;
-            bottomLine.y += rect.height;
-
-            // Modify horizontally to make sure it covers the entire list and not just the editable area 
-            bottomLine.x -= 50000;
-            bottomLine.width += 100000;
-
-            EditorGUI.DrawRect(bottomLine, _listLineColor);
+            DrawListElementLines(rect);
 
             // Draw a middle line using the data type color
             Rect lineRect = rect;
@@ -790,27 +974,193 @@ namespace Gork.Editor
                 EditorGUI.DrawRect(lineRect, color.Value);
             }
 
-            // Loop and add to the _rects list until we have enough entries
-            while (index > _rects.Count - 1)
+            SetRect(index, rect);
+        }
+
+        private static readonly string StringAssemblyQualifiedName = typeof(string).AssemblyQualifiedName;
+        private float GetParameterElementHeight(int index)
+        {
+            SerializedProperty prop = ParametersList.serializedProperty.GetArrayElementAtIndex(index);
+
+            string typeName = prop.FindPropertyRelative("SerializedType").stringValue;
+
+            // Check if the paramter type is of type string 
+            if (typeName == StringAssemblyQualifiedName)
             {
-                _rects.Add(default);
+                // Get the value from the property
+                string value = prop.FindPropertyRelative("Value").stringValue;
+
+                // Count how many line breaks there are in the string
+                int linebreakAmount = value.Count(c => c == '\n');
+
+                return LIST_ELEMENT_SIZE + (14.5f * linebreakAmount);
             }
 
-            // Set rect for usage in context menu detection
-            _rects[index] = rect;
+            return LIST_ELEMENT_SIZE;
+        }
+        #endregion
+
+        #region Tags GUI
+        private void AddTagToGraph(string name)
+        {
+            name = GetUniqueTagName(name);
+
+            if (!name.ToLower().Contains(_searchFilterString.ToLower()))
+            {
+                _searchField.value = "";
+            }
+
+            SerializedProperty prop = TagsList.serializedProperty;
+
+            int index = prop.arraySize;
+            prop.InsertArrayElementAtIndex(index);
+
+            _focusTagElement = index;
+
+            SerializedProperty newTag = prop.GetArrayElementAtIndex(index);
+
+            newTag.stringValue = name;
+
+            // Reset search filter
+            UpdateTagsSearchList(false);
+
+            GraphSerializedObject.ApplyModifiedProperties();
+
+            _scrollPosition = new Vector2(0, (float)TagsList.elementHeight * (float)index);
+        }
+
+        private void DuplicateTag(int index)
+        {
+            // Get properties
+            SerializedProperty prop = TagsList.serializedProperty;
+            SerializedProperty copiedProp = prop.GetArrayElementAtIndex(index);
+
+            // Create the new paramter
+            prop.InsertArrayElementAtIndex(index);
+            SerializedProperty newProp = prop.GetArrayElementAtIndex(index + 1);
+
+            // Copy values from the original property
+            newProp.stringValue = GetUniqueTagName(copiedProp.stringValue, index + 1);
+
+            GraphSerializedObject.ApplyModifiedProperties();
+
+            // Select the new parameter
+            TagsList.Select(index + 1);
+
+            Vector2 scrollPos = _scrollPosition;
+            UpdateTagsSearchList();
+
+            _scrollPosition = scrollPos;
+        }
+
+        private void RemoveTag(int index)
+        {
+            // Delete the array element
+            TagsList.serializedProperty.DeleteArrayElementAtIndex(index);
+            GraphSerializedObject.ApplyModifiedProperties();
+
+            // Select the new last element if the index is out of range
+            if (TagsList.count <= index)
+            {
+                // Ensure that the count is above 0
+                TagsList.Select(Mathf.Max(index - 1, 0));
+            }
+
+            Vector2 scrollPos = _scrollPosition;
+            UpdateTagsSearchList();
+
+            _scrollPosition = scrollPos;
+        }
+
+        private void UpdateTagsSearchList(bool repaint = true)
+        {
+            _tagsSearchFilterList.Clear();
+
+            SerializedProperty prop = TagsList.serializedProperty;
+
+            int length = prop.arraySize;
+
+            // Filter
+            for (int i = 0; i < length; i++)
+            {
+                SerializedProperty arrayElement = prop.GetArrayElementAtIndex(i);
+
+                // Check if the name matches the search filter string
+                if (!string.IsNullOrEmpty(_searchFilterString))
+                {
+                    if (!arrayElement.stringValue.ToLower().Contains(_searchFilterString.ToLower()))
+                    {
+                        continue;
+                    }
+                }
+
+                _tagsSearchFilterList.Add(i);
+            }
+
+            if (repaint)
+            {
+                _imguiContainer.MarkDirtyRepaint();
+            }
+
+            _scrollPosition = Vector2.zero;
+        }
+
+        private string GetUniqueTagName(string startName, int? index = null)
+        {
+            SerializedProperty prop = TagsList.serializedProperty;
+
+            return GetUniqueName(startName, prop, prop => prop.stringValue, index);
+        }
+
+        private void TagListDrawElement(Rect rect, int index, bool isActive, bool isFocused)
+        {
+            // Cache this array property
+            SerializedProperty prop = TagsList.serializedProperty.GetArrayElementAtIndex(index);
+
+            // Remove offscreen offset + 5 for a bit of extra space
+            rect.width -= LIST_SIZE_OFFSET + 5;
+
+            Rect textFieldRect = rect;
+            textFieldRect.height = rect.height - 9;
+            textFieldRect.y += (rect.height - textFieldRect.height) / 2;
+
+            // Set a control so we can force focus on this text field if needed
+            GUI.SetNextControlName("TextField");
+
+            // Draw the text field
+            string textValue = EditorGUI.TextField(textFieldRect, prop.stringValue);
+
+            // Prevent setting the name to empty strings
+            if (!string.IsNullOrEmpty(textValue.Trim()) && textValue != prop.stringValue)
+            {
+                // Also ensure the name is unique
+                prop.stringValue = GetUniqueTagName(textValue, index);
+            }
+
+            // Focus this text field if it's supposed to be focused
+            if (_focusTagElement.HasValue && _focusTagElement.Value == index)
+            {
+                GUI.FocusControl("TextField");
+
+                _focusTagElement = null;
+            }
+
+            // Draw colored left side
+            DrawLeftSideColor(rect, _defaultLeftSideColor);
+
+            DrawListElementLines(rect);
+
+            SetRect(index, rect);
         }
         #endregion
 
         #region Event GUI
-        private void EventEditorOnGui()
-        {
-            EditorGUILayout.LabelField("Events are work in progress...");
-        }
         #endregion
 
         private enum ModeEnum
         {
             parameters,
+            tags,
             events,
         }
     }

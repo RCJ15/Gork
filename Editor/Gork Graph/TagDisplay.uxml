@@ -1,0 +1,12 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <ui:VisualElement name="TagDisplay" style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: hidden; align-items: center; justify-content: center;">
+        <ui:ScrollView name="TagsContainer" vertical-scroller-visibility="Hidden" mode="Horizontal" style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: hidden; margin-top: 3px; border-bottom-right-radius: 5px; border-top-right-radius: 5px;" />
+        <ui:VisualElement style="border-left-width: 1px; border-right-width: 1px; border-top-width: 1px; border-bottom-width: 1px; border-top-left-radius: 5px; border-bottom-left-radius: 5px; border-top-right-radius: 5px; border-bottom-right-radius: 5px; border-left-color: rgb(32, 32, 32); border-right-color: rgb(32, 32, 32); border-top-color: rgb(32, 32, 32); border-bottom-color: rgb(32, 32, 32); position: absolute; left: 0; top: 0; right: 0; bottom: 0; background-color: rgba(255, 255, 255, 0.05); display: none;" />
+        <ui:VisualElement name="RemoveButton" style="position: absolute; right: 20px; width: 20px; height: 20px; align-items: center; justify-content: center; bottom: auto; top: auto; display: none;">
+            <ui:Label text="-" display-tooltip-when-elided="true" name="Image" style="width: 15px; background-color: rgba(255, 255, 255, 0.09); border-top-left-radius: 10px; border-bottom-left-radius: 10px; border-top-right-radius: 10px; border-bottom-right-radius: 10px; font-size: 15px; -unity-font-style: bold; -unity-text-align: middle-center; padding-left: 2.5px; padding-bottom: 2.5px; height: 15px;" />
+        </ui:VisualElement>
+        <ui:VisualElement name="AddButton" style="position: absolute; right: 0; width: 20px; height: 15px; align-items: center; justify-content: center; display: none;">
+            <ui:Label text="+" display-tooltip-when-elided="true" name="Image" style="width: 15px; height: 15px; background-color: rgba(255, 255, 255, 0.09); border-top-left-radius: 10px; border-bottom-left-radius: 10px; border-top-right-radius: 10px; border-bottom-right-radius: 10px; font-size: 15px; -unity-font-style: bold; -unity-text-align: middle-center; padding-left: 2.5px; padding-bottom: 2.5px;" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

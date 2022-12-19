@@ -19,6 +19,9 @@ namespace Gork
         ISerializationCallbackReceiver
 #endif
     {
+        public static readonly Type SignalType = typeof(SignalClass);
+        private class SignalClass { }
+
         [SerializeField] private List<GorkNode> nodes = new List<GorkNode>();
         public List<GorkNode> Nodes => nodes;
 
@@ -30,6 +33,9 @@ namespace Gork
 
         public delegate void OnGraphStopEvent();
         public OnGraphStopEvent OnGraphStop;
+
+        public delegate void OnNodeStopEvent(GorkNode node);
+        public OnNodeStopEvent OnNodeStop;
 
 #if UNITY_EDITOR
         private SerializedObject _cachedSerializedObject;
@@ -260,7 +266,7 @@ namespace Gork
                     foreach (Parameter parameter in Parameters)
                     {
                         // Cache the type and name of the parameter
-                        Type parameterType = parameter.ActualType;
+                        Type parameterType = parameter.Type;
                         string parameterName = parameter.Name;
 
                         // Create the dictionary for this parameter type if it doesn't already exist
@@ -481,26 +487,79 @@ namespace Gork
         /// Class that contains data for a single parameter in a <see cref="GorkGraph"/>.
         /// </summary>
         [Serializable]
-        public class Parameter
+        public class Parameter : ISerializationCallbackReceiver
         {
             public string Name;
-            public DataType Type;
-            public Type ActualType => Type.ActualType();
+            public Type Type;
+            [SerializeField] private string SerializedType;
 
             public string Value;
+
+            public void OnBeforeSerialize()
+            {
+                SerializedType = Type == null ? "" : Type.AssemblyQualifiedName;
+            }
+
+            public void OnAfterDeserialize()
+            {
+                if (string.IsNullOrEmpty(SerializedType))
+                {
+                    Type = null;
+                    return;
+                }
+
+                Type = Type.GetType(SerializedType);
+            }
+        }
+        #endregion
+
+        #region Tags
+        [SerializeField] private List<string> _tags = new List<string>();
+        public List<string> Tags => _tags;
+
+        private Dictionary<string, List<GorkNode>> _nodeTagCache = null;
+        private Dictionary<string, List<GorkNode>> NodeTagCache
+        {
+            get
+            {
+                if (_nodeTagCache == null)
+                {
+                    _nodeTagCache = new Dictionary<string, List<GorkNode>>();
+
+                    foreach (GorkNode node in Nodes)
+                    {
+                        foreach (string tag in node.Tags)
+                        {
+                            if (!_nodeTagCache.ContainsKey(tag))
+                            {
+                                _nodeTagCache[tag] = new List<GorkNode>();
+                            }
+
+                            _nodeTagCache[tag].Add(node);
+                        }
+                    }
+                }
+
+                return _nodeTagCache;
+            }
+        }
+
+        public List<GorkNode> GetNodesWithTag(string tag)
+        {
+            if (NodeTagCache.TryGetValue(tag, out List<GorkNode> list))
+            {
+                return list;
+            }
+
+#if UNITY_EDITOR
+            Debug.LogWarning($"Gork Graph \"{name}\" does not contain any nodes that have the tag \"{tag}\"!");
+#endif
+
+            return null;
         }
         #endregion
 
         #region Events
         #endregion
-
-        [Serializable]
-        public enum DataType
-        {
-            Float,
-            Int,
-            Bool,
-            String
-        }
     }
 }

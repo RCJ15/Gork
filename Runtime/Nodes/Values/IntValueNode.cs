@@ -12,24 +12,35 @@ namespace Gork
     /// </summary>
     [GorkNodeInfo("Values/Int Value", GorkColors.INT_COLOR, 1)]
     [NoInputPorts]
-    [GorkOutputPort("Value", typeof(int), false)]
+    [GorkOutputPort("Value", typeof(int))]
     public class IntValueNode : GorkNode
     {
         public int Value;
 
 #if UNITY_EDITOR
+        private IntegerField _field;
+
         public override void Initialize(Node node)
         {
-            IntegerField field = new IntegerField();
-            field.value = Value;
-            field.RegisterValueChangedCallback(data =>
+            _field = new IntegerField();
+            _field.value = Value;
+            _field.RegisterValueChangedCallback(data =>
             {
                 Undo.RecordObject(this, $"Modified Property in {name}");
                 Value = data.newValue;
             });
 
-            node.inputContainer.Add(field);
-            node.RefreshExpandedState();
+            OnExpand();
+        }
+
+        public override void OnCollapse()
+        {
+            NodeView.inputContainer.Remove(_field);
+        }
+
+        public override void OnExpand()
+        {
+            NodeView.inputContainer.Add(_field);
         }
 #endif
 

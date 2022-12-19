@@ -1,0 +1,6 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <ui:VisualElement name="TagLabelArrows" style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: hidden; border-top-left-radius: 6px; border-bottom-left-radius: 6px; border-top-right-radius: 6px; border-bottom-right-radius: 6px; margin-left: 5px; margin-right: 5px; height: 15px;">
+        <ui:Label text="◀" display-tooltip-when-elided="true" name="LeftArrow" style="background-color: rgb(65, 65, 65); width: 50%; left: 0; top: 0; bottom: 0; position: absolute; -unity-text-align: middle-center; font-size: 8px; border-right-width: 1px; border-left-color: rgb(56, 56, 56); border-right-color: rgb(56, 56, 56); border-top-color: rgb(56, 56, 56); border-bottom-color: rgb(56, 56, 56); max-width: 12px; min-width: 0;" />
+        <ui:Label text="▶" display-tooltip-when-elided="true" name="RightArrow" style="background-color: rgb(65, 65, 65); width: 50%; top: 0; bottom: 0; position: absolute; -unity-text-align: middle-center; right: 0; font-size: 8px; border-left-width: 1px; border-left-color: rgb(56, 56, 56); border-right-color: rgb(56, 56, 56); border-top-color: rgb(56, 56, 56); border-bottom-color: rgb(56, 56, 56); left: auto; max-width: 12px; min-width: 0; padding-left: 2px; padding-right: 1px;" />
+    </ui:VisualElement>
+</ui:UXML>

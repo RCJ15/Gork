@@ -12,9 +12,9 @@ namespace Gork
     [GorkNodeInfo("Operations/Multiply Number", GorkColors.FLOAT_COLOR, 2)]
     [GorkNodeInfo("Operations/Divide Number", GorkColors.FLOAT_COLOR, 3)]
 
-    [GorkInputPort("X", typeof(float), false)]
-    [GorkInputPort("Y", typeof(float), false)]
-    [GorkOutputPort("Result", typeof(float), false)]
+    [GorkInputPort("X", typeof(float))]
+    [GorkInputPort("Y", typeof(float))]
+    [GorkOutputPort("Result", typeof(float))]
     public class NumberOperationNode : GorkNode
     {
 #if UNITY_EDITOR

@@ -21,10 +21,13 @@
                     </uie:ToolbarPopupSearchField>
                 </uie:Toolbar>
                 <uie:Toolbar name="BottomBar" style="top: initial; bottom: 0; position: absolute; right: 0; left: 0; height: 36px;">
-                    <uie:ToolbarButton text="Parameters" display-tooltip-when-elided="true" focusable="false" name="Parameters" style="left: 0; position: absolute; right: initial; bottom: 0; top: 0; -unity-text-align: middle-center; width: 50%; border-top-width: 2px; white-space: nowrap; border-left-width: 0; overflow: hidden;">
+                    <uie:ToolbarButton text="Parameters" display-tooltip-when-elided="true" focusable="false" name="Parameters" style="left: 0; position: absolute; right: initial; bottom: 0; top: 0; -unity-text-align: middle-center; width: 33%; border-top-width: 2px; white-space: nowrap; border-left-width: 0; overflow: hidden;">
                         <ui:VisualElement name="Highlight" style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; background-color: rgba(255, 255, 255, 0.15);" />
                     </uie:ToolbarButton>
-                    <uie:ToolbarButton text="Events" display-tooltip-when-elided="true" focusable="false" name="Events" style="left: initial; right: 0; position: absolute; bottom: 0; top: 0; -unity-text-align: middle-center; width: 50%; border-top-width: 2px; white-space: nowrap; border-right-width: 0; overflow: hidden;">
+                    <uie:ToolbarButton text="Tags" display-tooltip-when-elided="true" focusable="false" name="Tags" style="left: 33%; position: absolute; right: 33%; bottom: 0; top: 0; -unity-text-align: middle-center; width: 34%; border-top-width: 2px; white-space: nowrap; border-left-width: 1px; overflow: hidden;">
+                        <ui:VisualElement name="Highlight" style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; background-color: rgba(255, 255, 255, 0.15);" />
+                    </uie:ToolbarButton>
+                    <uie:ToolbarButton text="Events" display-tooltip-when-elided="true" focusable="false" name="Events" style="left: initial; right: 0; position: absolute; bottom: 0; top: 0; -unity-text-align: middle-center; width: 33%; border-top-width: 2px; white-space: nowrap; border-right-width: 0; overflow: hidden;">
                         <ui:VisualElement name="Highlight" style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; background-color: rgba(255, 255, 255, 0.15);" />
                     </uie:ToolbarButton>
                 </uie:Toolbar>
@@ -36,9 +39,7 @@
         </Gork.Editor.GorkSplitView>
     </ui:VisualElement>
     <ui:Label text="No Gork Graph is being edited!" display-tooltip-when-elided="true" name="NoGraphText" style="flex-grow: 1; position: absolute; left: 0; top: 0; right: 0; bottom: 0; -unity-text-align: middle-center; font-size: 30px; color: rgb(255, 255, 255); -unity-font-style: bold; background-color: rgba(0, 0, 0, 0.5);">
-        <ui:VisualElement name="RightSide" style="position: absolute; left: 50%; right: 0; top: 55%;">
-            <ui:Button text="Create New" display-tooltip-when-elided="true" name="CreateNewButton" focusable="false" style="width: 50%; height: 30px; font-size: 20px; align-items: auto; opacity: 1; position: absolute; left: -60%;" />
-            <ui:Button text="Open Existing" display-tooltip-when-elided="true" name="OpenExistingButton" focusable="false" style="width: 50%; height: 30px; font-size: 20px; left: 10%; position: absolute;" />
-        </ui:VisualElement>
+        <ui:Button text="Create New" display-tooltip-when-elided="true" name="CreateNewButton" focusable="false" style="width: 25%; height: 30px; font-size: 20px; align-items: auto; opacity: 1; position: absolute; left: 20%; top: 55%;" />
+        <ui:Button text="Open Existing" display-tooltip-when-elided="true" name="OpenExistingButton" focusable="false" style="width: 25%; height: 30px; font-size: 20px; left: 55%; position: absolute; top: 55%;" />
     </ui:Label>
 </ui:UXML>

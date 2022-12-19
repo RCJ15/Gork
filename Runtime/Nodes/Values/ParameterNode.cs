@@ -44,50 +44,45 @@ namespace Gork
         }
 
 #if UNITY_EDITOR
+        private Type _type;
+
         public override void Initialize(Node node)
         {
-            /*
-            TextField field = new TextField();
-            field.multiline = false;
-            field.value = ParameterName;
-            field.RegisterValueChangedCallback(data =>
-            {
-                Undo.RecordObject(this, $"Modified Property in {name}");
-                ParameterName = data.newValue;
-            });
+            OnExpand();
+        }
 
-            node.inputContainer.Add(field);
-            node.RefreshExpandedState();
-            */
+        public override void OnCollapse()
+        {
+            NodeView.inputContainer.Remove(IMGUIContainer);
+        }
 
-            node.inputContainer.Add(IMGUIContainer);
-            node.RefreshExpandedState();
+        public override void OnExpand()
+        {
+            NodeView.inputContainer.Add(IMGUIContainer);
         }
 
         public override void OnViewEnable()
         {
-            Type type;
-
             switch (AttributeID)
             {
                 default:
-                    type = typeof(float);
+                    _type = typeof(float);
                     break;
 
                 case 1:
-                    type = typeof(int);
+                    _type = typeof(int);
                     break;
 
                 case 2:
-                    type = typeof(bool);
+                    _type = typeof(bool);
                     break;
 
                 case 3:
-                    type = typeof(string);
+                    _type = typeof(string);
                     break;
             }
 
-            SetOutputPort(0, "Value", type, false);
+            SetOutputPort(0, "Value", _type);
             UpdateNodeView();
         }
 
@@ -105,7 +100,6 @@ namespace Gork
             // Get the name property
             SerializedProperty prop = serializedObject.FindProperty(nameof(ParameterName));
             string propValue = prop.stringValue;
-            GorkGraph.DataType type = (GorkGraph.DataType)AttributeID;
 
             // Create an empty generic menu which will be our dropdown menu
             GenericMenu menu = new GenericMenu();
@@ -114,7 +108,7 @@ namespace Gork
             foreach (GorkGraph.Parameter parameter in Graph.Parameters)
             {
                 // Ignore parameters without the same type
-                if (parameter.Type != type)
+                if (parameter.Type != _type)
                 {
                     continue;
                 }
