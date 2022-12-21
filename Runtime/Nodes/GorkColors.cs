@@ -19,5 +19,8 @@ namespace Gork
         public const string WORMHOLE_COLOR = "30421d";
         public const string TOOL_COlOR = "666666";
         public const string COROUTINE_COLOR = "57664D";
+
+        public const string INTERNAL_EVENT_COLOR = "002806";
+        public const string EXTERNAL_EVENT_COLOR = "21003D";
     }
 }

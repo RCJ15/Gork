@@ -25,8 +25,8 @@ namespace Gork.Editor
         private GorkNodeSearchWindow _searchWindow;
         public GorkNodeSearchWindow GorkSearchWindow => _searchWindow;
 
-        private MiniMap miniMap;
-        public MiniMap MiniMap => miniMap;
+        private MiniMap _miniMap;
+        public MiniMap MiniMap => _miniMap;
 
         private Vector3 _cachedMousePos;
         public Vector3 MousePos => TransformScreenPos(_cachedMousePos);
@@ -60,25 +60,25 @@ namespace Gork.Editor
             //nodeCreationRequest = context => OpenNodeCreationSearchWindow(context);
 
             #region Create minimap
-            miniMap = new MiniMap()
+            _miniMap = new MiniMap()
             {
                 anchored = true
             };
 
-            miniMap.SetPosition(new Rect(15, 25, 200, 180));
+            _miniMap.SetPosition(new Rect(15, 25, 200, 180));
 
-            Add(miniMap);
+            Add(_miniMap);
 
-            miniMap.visible = false;
+            _miniMap.visible = false;
 
             StyleColor backgroundColor = new StyleColor(new Color32(29, 29, 30, 255));
             StyleColor borderColor = new StyleColor(new Color32(51, 51, 51, 255));
 
-            miniMap.style.backgroundColor = backgroundColor;
-            miniMap.style.borderTopColor = borderColor;
-            miniMap.style.borderRightColor = borderColor;
-            miniMap.style.borderBottomColor = borderColor;
-            miniMap.style.borderLeftColor = borderColor;
+            _miniMap.style.backgroundColor = backgroundColor;
+            _miniMap.style.borderTopColor = borderColor;
+            _miniMap.style.borderRightColor = borderColor;
+            _miniMap.style.borderBottomColor = borderColor;
+            _miniMap.style.borderLeftColor = borderColor;
             #endregion
 
             RegisterCallback<ValidateCommandEvent>(OnValidateCommand);
@@ -102,7 +102,7 @@ namespace Gork.Editor
 
         public void ToggleMiniMap()
         {
-            miniMap.visible = !miniMap.visible;
+            _miniMap.visible = !_miniMap.visible;
         }
 
         private void OnMouseMoveEvent(MouseMoveEvent evt)

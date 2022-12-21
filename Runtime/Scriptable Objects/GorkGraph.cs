@@ -560,6 +560,72 @@ namespace Gork
         #endregion
 
         #region Events
+        public delegate void OnCallExternalEvent(string eventName, object parameter);
+        public OnCallExternalEvent OnCallExternal;
+
+        private Dictionary<string, List<EventNode>> _internalEventNodesCache = null;
+
+        private Dictionary<string, List<EventNode>> InternalEventNodesCache
+        {
+            get
+            {
+                if (_internalEventNodesCache == null)
+                {
+                    _internalEventNodesCache = new Dictionary<string, List<EventNode>>();
+
+                    foreach (EventNode node in GetAllNodesOfType<EventNode>())
+                    {
+                        if (!node.IsInternal)
+                        {
+                            continue;
+                        }
+
+                        string eventName = node.EventName;
+
+                        if (!_internalEventNodesCache.ContainsKey(eventName))
+                        {
+                            _internalEventNodesCache[eventName] = new List<EventNode>();
+                        }
+
+                        _internalEventNodesCache[eventName].Add(node);
+                    }
+                }
+
+                return _internalEventNodesCache;
+            }
+        }
+
+        /// <summary>
+        /// Triggers all internal <see cref="EventNode"/> inside of this GorkGraph with the given <paramref name="eventName"/>.
+        /// </summary>
+        public void TriggerInternalEvent(string eventName)
+        {
+            if (!InternalEventNodesCache.TryGetValue(eventName, out List<EventNode> list))
+            {
+                return;
+            }
+
+            foreach (EventNode node in list)
+            {
+                OnNodeCalled.Invoke(node, 0);
+            }
+        }
+
+        [SerializeField] private List<Event> _events = new List<Event>();
+        public List<Event> Events => _events;
+
+        [Serializable]
+        public class Event
+        {
+            public string Name;
+            public Type EventType;
+
+            public enum Type
+            {
+                External,
+                Internal,
+            }
+        }
         #endregion
     }
 }

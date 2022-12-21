@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 
 namespace Gork
 {
@@ -12,18 +13,54 @@ namespace Gork
     {
         [SerializeField] protected GorkGraph graph;
         [SerializeField] protected GorkActivationMode activationMode;
+        [SerializeField] protected Event[] events;
+
+        private Dictionary<string, List<Event>> _cachedEventsDictionary = null;
+        public Dictionary<string, List<Event>> EventsDictionary
+        {
+            get
+            {
+                if (_cachedEventsDictionary == null)
+                {
+                    _cachedEventsDictionary = new Dictionary<string, List<Event>>();
+
+                    foreach (Event evt in events)
+                    {
+                        string name = evt.Name;
+
+                        if (!_cachedEventsDictionary.ContainsKey(name))
+                        {
+                            _cachedEventsDictionary[name] = new List<Event>();
+                        }
+
+                        _cachedEventsDictionary[name].Add(evt);
+                    }
+                }
+
+                return _cachedEventsDictionary;
+            }
+        }
 
         public GorkGraph Graph
         {
             get => graph;
             set
             {
+                if (graph == value)
+                {
+                    return;
+                }
+
                 if (Playing)
                 {
                     StopGraph();
                 }
 
+                TryUnsubscribe();
+
                 graph = value;
+
+                TrySubscribe();
             }
         }
 
@@ -57,6 +94,65 @@ namespace Gork
             }
         }
 
+        #region Subscribing
+        private bool _subscribed = false;
+
+        /// <summary>
+        /// Will try to subscribe to all events on the graph. Does nothing if already subscribed.
+        /// </summary>
+        private void TrySubscribe()
+        {
+            if (_subscribed)
+            {
+                return;
+            }
+
+            if (graph == null)
+            {
+                _subscribed = false;
+                return;
+            }
+
+            // Subscribe to all events on the GorkGraph
+            graph.OnNodeCalled += StartNode;
+            graph.OnGraphStop += StopGraph;
+            graph.OnNodeStop += StopNode;
+            graph.OnCallExternal += CallExternalEvent;
+
+            _subscribed = true;
+        }
+
+        /// <summary>
+        /// Will try to unsubscribe to all events on the graph. Does nothing if already unsubscribed.
+        /// </summary>
+        private void TryUnsubscribe()
+        {
+            if (!_subscribed)
+            {
+                return;
+            }
+
+            if (graph == null)
+            {
+                _subscribed = false;
+                return;
+            }
+
+            // Unsubscribe all events on the GorkGraph
+            graph.OnNodeCalled -= StartNode;
+            graph.OnGraphStop -= StopGraph;
+            graph.OnNodeStop -= StopNode;
+            graph.OnCallExternal -= CallExternalEvent;
+
+            _subscribed = false;
+        }
+        #endregion
+
+        protected virtual void OnDisable()
+        {
+            TryUnsubscribe();
+        }
+
         private void Update()
         {
             if (coroutineCount > 0 && !Playing)
@@ -87,6 +183,11 @@ namespace Gork
 
         public virtual void StartGraph()
         {
+            if (graph == null)
+            {
+                return;
+            }
+
             List<StartNode> startNodes = graph.GetAllNodesOfType<StartNode>();
 
             // There are no start nodes in the Graph so we cannot start!!! :( :( ;3;
@@ -97,11 +198,6 @@ namespace Gork
 #endif
                 return;
             }
-
-            // Subscribe to the GorkGraph
-            graph.OnNodeCalled += StartNode;
-            graph.OnGraphStop += StopGraph;
-            graph.OnNodeStop += StopNode;
 
             // Send a signal through all StartNodes
             foreach (StartNode node in startNodes)
@@ -115,6 +211,8 @@ namespace Gork
         /// </summary>
         public virtual void StartNode(GorkNode node, int port)
         {
+            TrySubscribe();
+
             activeCoroutines.Add(node, StartCoroutine(NodeCoroutine(node, port)));
             coroutineCount++;
         }
@@ -129,8 +227,6 @@ namespace Gork
                 return;
             }
 
-            Debug.Log("Stopped " + node.name);
-
             StopCoroutine(coroutine);
 
             activeCoroutines.Remove(node);
@@ -140,9 +236,6 @@ namespace Gork
 
         public virtual void StopGraph()
         {
-            graph.OnNodeCalled -= StartNode;
-            graph.OnGraphStop -= StopGraph;
-
             // Stop all active coroutines
             foreach (var pair in activeCoroutines)
             {
@@ -154,11 +247,33 @@ namespace Gork
             coroutineCount = 0;
         }
 
+        protected virtual void CallExternalEvent(string eventName, object parameter)
+        {
+            if (!EventsDictionary.TryGetValue(eventName, out List<Event> list))
+            {
+#if UNITY_EDITOR
+                Debug.LogWarning($"The GorkGraph \"{graph.name}\" doesn't contain any external events called \"{eventName}\"!", graph);
+#endif
+                return;
+            }
+
+            foreach (Event evt in list)
+            {
+                evt.Invoke(parameter);
+            }
+        }
+
+        /// <summary>
+        /// Called when the graph starts to play.
+        /// </summary>
         protected virtual void OnGraphStart()
         {
 
         }
 
+        /// <summary>
+        /// Called when the graph stops playing.
+        /// </summary>
         protected virtual void OnGraphStop()
         {
             Debug.Log("Graph stopped!");
@@ -171,6 +286,11 @@ namespace Gork
             activeCoroutines.Remove(node);
 
             coroutineCount--;
+        }
+
+        public void TriggerInternalEvent(string eventName)
+        {
+            graph.TriggerInternalEvent(eventName);
         }
 
         #region Parameters
@@ -292,10 +412,90 @@ namespace Gork
         #endregion
         #endregion
 
+        [Serializable]
+        public class Event
+        {
+            public string Name = "Event Name";
+            public EventType Type;
+
+            public UnityEvent NormalTrigger;
+            public UnityEvent<float> FloatTrigger;
+            public UnityEvent<int> IntTrigger;
+            public UnityEvent<bool> BoolTrigger;
+            public UnityEvent<string> StringTrigger;
+            public UnityEvent<object> GenericTrigger;
+
+            public void Invoke(object parameter)
+            {
+                switch (Type)
+                {
+                    // Default = Normal
+                    default:
+                        NormalTrigger.Invoke();
+                        break;
+
+                    // Float
+                    case EventType.Float:
+                        try
+                        {
+                            FloatTrigger.Invoke((float)parameter);
+                        }
+                        catch (Exception)
+                        {
+                            FloatTrigger.Invoke(default);
+                        }
+                        break;
+
+                    // Int
+                    case EventType.Int:
+                        try
+                        {
+                            IntTrigger.Invoke((int)parameter);
+                        }
+                        catch (Exception)
+                        {
+                            IntTrigger.Invoke(default);
+                        }
+                        break;
+
+                    // Bool
+                    case EventType.Bool:
+                        try
+                        {
+                            BoolTrigger.Invoke((bool)parameter);
+                        }
+                        catch (Exception)
+                        {
+                            BoolTrigger.Invoke(default);
+                        }
+                        break;
+
+                    // String
+                    case EventType.String:
+                        StringTrigger.Invoke(parameter.ToString());
+                        break;
+
+                    // Generic
+                    case EventType.Generic:
+                        GenericTrigger.Invoke(parameter);
+                        break;
+                }
+            }
+
+            public enum EventType
+            {
+                Normal,
+                Float,
+                Int,
+                Bool,
+                String,
+                Generic,
+            }
+        }
+
         /// <summary>
         /// A special enum which determines when a <see cref="GorkGraph"/> gets activated in a <see cref="GorkGraphReader"/>
         /// </summary>
-        [Serializable]
         public enum GorkActivationMode
         {
             OnStart,

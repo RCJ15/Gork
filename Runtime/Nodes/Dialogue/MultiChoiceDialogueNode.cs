@@ -33,11 +33,6 @@ namespace Gork
         }
 
 #if UNITY_EDITOR
-        public override void Initialize(Node node)
-        {
-            base.Initialize(node);
-        }
-
         private ReorderableList _list;
         private SerializedProperty _property;
 

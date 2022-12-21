@@ -22,7 +22,10 @@ namespace Gork
 
         public override void Initialize(Node node)
         {
-            OnExpand();
+            if (Expanded)
+            {
+                OnExpand();
+            }
         }
 
         public override void OnCollapse()

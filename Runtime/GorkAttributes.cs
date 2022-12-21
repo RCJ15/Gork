@@ -15,7 +15,7 @@ namespace Gork
     /// Each one of these attriutes added to a <see cref="GorkNode"/ > will create an entry in the gork node creation menu. <para/>
     /// Every <see cref="GorkNode"/> should implement this.
     /// </summary>
-    [AttributeUsage(AttributeTargets.Class, AllowMultiple = true, Inherited = true)]
+    [AttributeUsage(AttributeTargets.Class, AllowMultiple = true, Inherited = false)]
     public class GorkNodeInfoAttribute : Attribute
     {
         public string DisplayName = null;

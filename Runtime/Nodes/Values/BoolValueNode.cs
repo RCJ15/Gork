@@ -31,7 +31,11 @@ namespace Gork
                 Value = data.newValue;
             });
 
-            OnExpand();
+
+            if (Expanded)
+            {
+                OnExpand();
+            }
         }
 
         public override void OnCollapse()

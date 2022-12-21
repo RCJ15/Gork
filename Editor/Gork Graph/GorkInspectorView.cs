@@ -1,6 +1,5 @@
 using System;
 using System.Linq;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
@@ -24,6 +23,7 @@ namespace Gork.Editor
 
         private string _searchFilterString = "";
         private Type _parametersSearchFilter = null;
+        private GorkGraph.Event.Type? _eventsSearchFilter = null;
         private ToolbarPopupSearchField _searchField;
 
         private IMGUIContainer _imguiContainer;
@@ -150,6 +150,65 @@ namespace Gork.Editor
         }
         #endregion
 
+        #region Events List
+        private ReorderableList _cachedEventsList;
+        private ReorderableList EventsList
+        {
+            get
+            {
+                // Create and cache list if null
+                if (_cachedEventsList == null)
+                {
+                    SerializedProperty prop = GraphSerializedObject.FindProperty("_events");
+
+                    _cachedEventsList = new ReorderableList(GraphSerializedObject, prop, true, false, false, true);
+
+                    _cachedEventsList.drawElementCallback = EventListDrawElement;
+                    _cachedEventsList.drawHeaderCallback = null;
+                    _cachedEventsList.onRemoveCallback = list => RemoveEvent(list.index);
+
+                    _cachedEventsList.showDefaultBackground = false;
+
+                    _cachedEventsList.elementHeight = LIST_ELEMENT_SIZE;
+                }
+
+                return _cachedEventsList;
+            }
+        }
+        private int? _focusEventElement = null;
+
+        private List<int> _eventsSearchFilterList = new List<int>();
+        private ReorderableList _cachedEventsSearchList;
+        private ReorderableList EventsSearchList
+        {
+            get
+            {
+                if (_cachedEventsSearchList == null)
+                {
+                    _cachedEventsSearchList = new ReorderableList(_eventsSearchFilterList, typeof(int), false, false, false, true);
+
+                    _cachedEventsSearchList.drawElementCallback = (Rect rect, int index, bool isActive, bool isFocused) => EventListDrawElement(rect, _eventsSearchFilterList[index], isActive, isFocused);
+                    _cachedEventsSearchList.drawHeaderCallback = null;
+                    _cachedEventsSearchList.onRemoveCallback = list =>
+                    {
+                        RemoveEvent(list.index);
+
+                        UpdateEventsSearchList(false);
+                    };
+
+                    _cachedEventsSearchList.showDefaultBackground = false;
+
+                    _cachedEventsSearchList.elementHeight = LIST_ELEMENT_SIZE;
+                }
+
+                return _cachedEventsSearchList;
+            }
+        }
+
+        private static readonly Color _externalEventColor = new Color(0.564705f, 0, 1);
+        private static readonly Color _internalEventColor = new Color(0, 0.717647f, 0.094117f);
+        #endregion
+
         private static readonly Color _listBackgroundColor = new Color(1, 1, 1, 0.015686f);
         private static readonly Color _listLineColor = new Color(0, 0, 0, 0.372549f);
         private static readonly Color _defaultLeftSideColor = new Color(1, 1, 1, 0.1f);
@@ -202,18 +261,18 @@ namespace Gork.Editor
                     removeElement = RemoveParameter;
                     break;
 
-                case ModeEnum.tags:
+                case ModeEnum.Tags:
                     prop = TagsList.serializedProperty;
 
                     duplicateElement = DuplicateTag;
                     removeElement = RemoveTag;
                     break;
 
-                case ModeEnum.events:
-                    prop = ParametersList.serializedProperty;
+                case ModeEnum.Events:
+                    prop = EventsList.serializedProperty;
 
-                    duplicateElement = DuplicateParameter;
-                    removeElement = RemoveParameter;
+                    duplicateElement = DuplicateEvent;
+                    removeElement = RemoveEvent;
                     break;
             }
 
@@ -282,28 +341,28 @@ namespace Gork.Editor
 
             parameterButton.clicked += () =>
             {
-                if (_mode == ModeEnum.parameters)
+                if (_mode == ModeEnum.Parameters)
                 {
                     return;
                 }
 
                 ParameterButtonColorChange();
 
-                _mode = ModeEnum.parameters;
+                _mode = ModeEnum.Parameters;
 
                 UpdateParametersSearchList();
             };
 
             tagsButton.clicked += () =>
             {
-                if (_mode == ModeEnum.tags)
+                if (_mode == ModeEnum.Tags)
                 {
                     return;
                 }
 
                 TagsButtonColorChange();
 
-                _mode = ModeEnum.tags;
+                _mode = ModeEnum.Tags;
 
                 _parametersSearchFilter = null;
                 UpdateTagsSearchList();
@@ -311,14 +370,14 @@ namespace Gork.Editor
 
             eventsButton.clicked += () =>
             {
-                if (_mode == ModeEnum.events)
+                if (_mode == ModeEnum.Events)
                 {
                     return;
                 }
 
                 EventsButtonColorChange();
 
-                _mode = ModeEnum.events;
+                _mode = ModeEnum.Events;
 
                 _parametersSearchFilter = null;
             };
@@ -371,9 +430,14 @@ namespace Gork.Editor
                     _createEventMenu = new GenericMenu();
 
                     // Add an entry for creating every type of event
-                    _createEventMenu.AddItem(new GUIContent("Event"), false, () =>
+                    _createEventMenu.AddItem(new GUIContent("External Event"), false, () =>
                     {
-                        Debug.Log("Create Event");
+                        AddEventToGraph("New External Event", GorkGraph.Event.Type.External);
+                    });
+
+                    _createEventMenu.AddItem(new GUIContent("Internal Event"), false, () =>
+                    {
+                        AddEventToGraph("New Internal Event", GorkGraph.Event.Type.Internal);
                     });
                 }
                 #endregion
@@ -384,15 +448,15 @@ namespace Gork.Editor
                 // Spawn the correct dropdown based on which mode is currently active
                 switch (_mode)
                 {
-                    case ModeEnum.parameters:
+                    case ModeEnum.Parameters:
                         _createParameterMenu.DropDown(addButtonRect);
                         break;
 
-                    case ModeEnum.tags:
+                    case ModeEnum.Tags:
                         AddTagToGraph("New Tag");
                         break;
 
-                    case ModeEnum.events:
+                    case ModeEnum.Events:
                         _createEventMenu.DropDown(addButtonRect);
                         break;
                 }
@@ -413,15 +477,16 @@ namespace Gork.Editor
 
                 switch (_mode)
                 {
-                    case ModeEnum.parameters:
+                    case ModeEnum.Parameters:
                         UpdateParametersSearchList();
                         break;
 
-                    case ModeEnum.tags:
+                    case ModeEnum.Tags:
                         UpdateTagsSearchList();
                         break;
 
-                    case ModeEnum.events:
+                    case ModeEnum.Events:
+                        UpdateEventsSearchList();
                         break;
                 }
             });
@@ -435,7 +500,7 @@ namespace Gork.Editor
                 // These menus can't be cached since the entries in the menus will display if they are selected or not which can't be edited once the menu is created (stupid Unity thing)
                 switch (_mode)
                 {
-                    case ModeEnum.parameters:
+                    case ModeEnum.Parameters:
                         #region Create Filter Parameters Menu
                         // Create the filter parameters menu
                         GenericMenu filterParametersMenu = new GenericMenu();
@@ -471,17 +536,27 @@ namespace Gork.Editor
                         filterParametersMenu.DropDown(searchFieldButtonRect);
                         break;
 
-                    case ModeEnum.events:
+                    case ModeEnum.Events:
 
                         #region Filter Events Menu
                         // Create the filter events menu
                         GenericMenu filterEventsMenu = new GenericMenu();
 
                         // Add an entry for setting the filter for each event type
-                        filterEventsMenu.AddItem(new GUIContent("Name"), _parametersSearchFilter == null, () =>
+                        filterEventsMenu.AddItem(new GUIContent("Name"), !_eventsSearchFilter.HasValue, () =>
                         {
-                            _parametersSearchFilter = null;
-                            UpdateParametersSearchList();
+                            _eventsSearchFilter = null;
+                            UpdateEventsSearchList();
+                        });
+                        filterEventsMenu.AddItem(new GUIContent("External Event"), _eventsSearchFilter.HasValue && _eventsSearchFilter.Value == GorkGraph.Event.Type.External, () =>
+                        {
+                            _eventsSearchFilter = GorkGraph.Event.Type.External;
+                            UpdateEventsSearchList();
+                        });
+                        filterEventsMenu.AddItem(new GUIContent("Internal Event"), _eventsSearchFilter.HasValue && _eventsSearchFilter.Value == GorkGraph.Event.Type.Internal, () =>
+                        {
+                            _eventsSearchFilter = GorkGraph.Event.Type.Internal;
+                            UpdateEventsSearchList();
                         });
                         #endregion
 
@@ -513,12 +588,6 @@ namespace Gork.Editor
                 return;
             }
 
-            if (_mode == ModeEnum.events)
-            {
-                EditorGUILayout.LabelField("Events are a work in progress");
-                return;
-            }
-
             ReorderableList list;
             ReorderableList searchList;
 
@@ -529,14 +598,14 @@ namespace Gork.Editor
                     searchList = ParametersSearchList;
                     break;
 
-                case ModeEnum.tags:
+                case ModeEnum.Tags:
                     list = TagsList;
                     searchList = TagsSearchList;
                     break;
 
-                case ModeEnum.events:
-                    list = ParametersList;
-                    searchList = ParametersSearchList;
+                case ModeEnum.Events:
+                    list = EventsList;
+                    searchList = EventsSearchList;
                     break;
             }
 
@@ -544,7 +613,7 @@ namespace Gork.Editor
 
             Rect contentRect = _imguiContainer.parent.contentRect;
 
-            bool displaySearchBar = (_mode == ModeEnum.parameters && _parametersSearchFilter != null) || !string.IsNullOrEmpty(_searchFilterString);
+            bool displaySearchBar = (_mode == ModeEnum.Parameters && _parametersSearchFilter != null) || (_mode == ModeEnum.Events && _eventsSearchFilter.HasValue) || !string.IsNullOrEmpty(_searchFilterString);
 
             // Position list so the remove button isn't shown as it looks pretty ugly
             Rect rect = EditorGUILayout.GetControlRect();
@@ -626,11 +695,47 @@ namespace Gork.Editor
                 arrayNames.Add(getName.Invoke(prop.GetArrayElementAtIndex(i)).ToLower());
             }
 
+            // Try to detect the last number in the name
+            string trimmedName = startName.TrimEnd();
+            int lastNumber = 0;
+
+            // Check if the last letter is a number
+            int trimmedNameLength = trimmedName.Length;
+
+            // This only works if the name is more than 1 characters
+            if (trimmedNameLength > 1)
+            {
+                char lastChar = trimmedName[trimmedNameLength - 1];
+
+                if (char.IsNumber(lastChar))
+                {
+                    // If so, then we loop from there until we find a whitespace and compile that to our numberString
+                    string numberString = lastChar.ToString();
+
+                    if (trimmedNameLength > 2)
+                    {
+                        for (int i = trimmedNameLength - 2; i >= 0; i--)
+                        {
+                            char c = trimmedName[i];
+
+                            if (!char.IsNumber(c))
+                            {
+                                break;
+                            }
+
+                            numberString += c;
+                        }
+                    }
+
+                    int.TryParse(numberString, out lastNumber);
+                }
+
+            }
             // Do while loop to determine if the name is unique or not
-            int loopAmount = 0;
+            int loopAmount = lastNumber;
 
             // Remove numbers and whitespace at the end of the name
-            string trimmedName = startName.TrimEnd().TrimEnd('0', '1', '2', '3', '4', '5', '6', '7', '8', '9').TrimEnd();
+            string trimmedNameNoNumbers = trimmedName.TrimEnd('0', '1', '2', '3', '4', '5', '6', '7', '8', '9').TrimEnd();
             do
             {
                 // Name is NOT in array name list?
@@ -640,11 +745,11 @@ namespace Gork.Editor
                     break;
                 }
 
-                name = $"{trimmedName} {loopAmount}";
+                name = $"{trimmedNameNoNumbers} {loopAmount}";
 
                 loopAmount++;
             }
-            while (loopAmount <= 1000); // Limit to only loop a maximum of 1000 times
+            while (loopAmount <= 1000 + lastNumber); // Limit to only loop a maximum of 1000 times
 
             return name;
         }
@@ -758,12 +863,8 @@ namespace Gork.Editor
             ParametersList.serializedProperty.DeleteArrayElementAtIndex(index);
             GraphSerializedObject.ApplyModifiedProperties();
 
-            // Select the new last element if the index is out of range
-            if (ParametersList.count <= index)
-            {
-                // Ensure that the count is above 0
-                ParametersList.Select(Mathf.Max(index - 1, 0));
-            }
+            // Select the element above and ensure that the selection index is above 0
+            ParametersList.Select(Mathf.Max(index - 1, 0));
 
             Vector2 scrollPos = _scrollPosition;
             UpdateParametersSearchList();
@@ -1059,12 +1160,8 @@ namespace Gork.Editor
             TagsList.serializedProperty.DeleteArrayElementAtIndex(index);
             GraphSerializedObject.ApplyModifiedProperties();
 
-            // Select the new last element if the index is out of range
-            if (TagsList.count <= index)
-            {
-                // Ensure that the count is above 0
-                TagsList.Select(Mathf.Max(index - 1, 0));
-            }
+            // Select the element above and ensure that the selection index is above 0
+            TagsList.Select(Mathf.Max(index - 1, 0));
 
             Vector2 scrollPos = _scrollPosition;
             UpdateTagsSearchList();
@@ -1155,13 +1252,198 @@ namespace Gork.Editor
         #endregion
 
         #region Event GUI
+        private void AddEventToGraph(string name, GorkGraph.Event.Type eventType)
+        {
+            name = GetUniqueEventName(name);
+
+            if (!name.ToLower().Contains(_searchFilterString.ToLower()))
+            {
+                _searchField.value = "";
+            }
+
+            SerializedProperty prop = EventsList.serializedProperty;
+
+            int index = prop.arraySize;
+            prop.InsertArrayElementAtIndex(index);
+
+            _focusEventElement = index;
+
+            SerializedProperty newTag = prop.GetArrayElementAtIndex(index);
+
+            newTag.FindPropertyRelative("Name").stringValue = name;
+            newTag.FindPropertyRelative("EventType").enumValueIndex = (int)eventType;
+
+            // Reset search filter
+            UpdateEventsSearchList(false);
+
+            GraphSerializedObject.ApplyModifiedProperties();
+
+            _scrollPosition = new Vector2(0, (float)EventsList.elementHeight * (float)index);
+        }
+
+        private void DuplicateEvent(int index)
+        {
+            // Get properties
+            SerializedProperty prop = EventsList.serializedProperty;
+            SerializedProperty copiedProp = prop.GetArrayElementAtIndex(index);
+
+            // Create the new paramter
+            prop.InsertArrayElementAtIndex(index);
+            SerializedProperty newProp = prop.GetArrayElementAtIndex(index + 1);
+
+            // Copy values from the original property
+            newProp.FindPropertyRelative("Name").stringValue = GetUniqueEventName(copiedProp.FindPropertyRelative("Name").stringValue, index + 1);
+
+            GraphSerializedObject.ApplyModifiedProperties();
+
+            // Select the new parameter
+            EventsList.Select(index + 1);
+
+            Vector2 scrollPos = _scrollPosition;
+            UpdateEventsSearchList();
+
+            _scrollPosition = scrollPos;
+        }
+
+        private void RemoveEvent(int index)
+        {
+            // Delete the array element
+            EventsList.serializedProperty.DeleteArrayElementAtIndex(index);
+            GraphSerializedObject.ApplyModifiedProperties();
+
+            // Select the element above and ensure that the selection index is above 0
+            EventsList.Select(Mathf.Max(index - 1, 0));
+
+            Vector2 scrollPos = _scrollPosition;
+            UpdateEventsSearchList();
+
+            _scrollPosition = scrollPos;
+        }
+
+        private void UpdateEventsSearchList(bool repaint = true)
+        {
+            _eventsSearchFilterList.Clear();
+
+            SerializedProperty prop = EventsList.serializedProperty;
+
+            int length = prop.arraySize;
+
+            // Filter
+            for (int i = 0; i < length; i++)
+            {
+                SerializedProperty arrayElement = prop.GetArrayElementAtIndex(i);
+
+                // Check if the name matches the search filter string
+                if (!string.IsNullOrEmpty(_searchFilterString))
+                {
+                    SerializedProperty nameProp = arrayElement.FindPropertyRelative("Name");
+                    
+                    if (!nameProp.stringValue.ToLower().Contains(_searchFilterString.ToLower()))
+                    {
+                        continue;
+                    }
+                }
+
+                // Add this index regularly if the search filter type has no value
+                if (!_eventsSearchFilter.HasValue)
+                {
+                    _eventsSearchFilterList.Add(i);
+                }
+                // Otherwise we will check and only add the matching DataTypes
+                else
+                {
+                    SerializedProperty typeProp = arrayElement.FindPropertyRelative("EventType");
+
+                    if (_eventsSearchFilter.Value == (GorkGraph.Event.Type)typeProp.enumValueIndex)
+                    {
+                        _eventsSearchFilterList.Add(i);
+                    }
+                }
+            }
+
+            if (repaint)
+            {
+                _imguiContainer.MarkDirtyRepaint();
+            }
+
+            _scrollPosition = Vector2.zero;
+        }
+
+        private string GetUniqueEventName(string startName, int? index = null)
+        {
+            SerializedProperty prop = EventsList.serializedProperty;
+
+            return GetUniqueName(startName, prop, prop => prop.FindPropertyRelative("Name").stringValue, index);
+        }
+
+        private void EventListDrawElement(Rect rect, int index, bool isActive, bool isFocused)
+        {
+            // Cache this array property
+            SerializedProperty prop = EventsList.serializedProperty.GetArrayElementAtIndex(index);
+
+            // Remove offscreen offset + 5 for a bit of extra space
+            rect.width -= LIST_SIZE_OFFSET + 5;
+
+            Rect textFieldRect = rect;
+            textFieldRect.height = rect.height - 9;
+            textFieldRect.y += (rect.height - textFieldRect.height) / 2;
+
+            // Set a control so we can force focus on this text field if needed
+            GUI.SetNextControlName("TextField");
+
+            SerializedProperty nameProp = prop.FindPropertyRelative("Name");
+
+            // Draw the text field
+            string textValue = EditorGUI.TextField(textFieldRect, nameProp.stringValue);
+
+            // Prevent setting the name to empty strings
+            if (!string.IsNullOrEmpty(textValue.Trim()) && textValue != nameProp.stringValue)
+            {
+                // Also ensure the name is unique
+                nameProp.stringValue = GetUniqueEventName(textValue, index);
+            }
+
+            // Focus this text field if it's supposed to be focused
+            if (_focusEventElement.HasValue && _focusEventElement.Value == index)
+            {
+                GUI.FocusControl("TextField");
+
+                _focusEventElement = null;
+            }
+
+            // Draw colored left side based on the event type
+            // External = Purple
+            // Internal = Green
+            GorkGraph.Event.Type eventType = (GorkGraph.Event.Type)prop.FindPropertyRelative("EventType").enumValueIndex;
+            Color color = _defaultLeftSideColor;
+
+            switch (eventType)
+            {
+                case GorkGraph.Event.Type.External:
+                    color = _externalEventColor;
+                    break;
+
+                case GorkGraph.Event.Type.Internal:
+                    color = _internalEventColor;
+                    break;
+            }
+
+            color.a = 0.1f;
+
+            DrawLeftSideColor(rect, color);
+
+            DrawListElementLines(rect);
+
+            SetRect(index, rect);
+        }
+
         #endregion
 
         private enum ModeEnum
         {
-            parameters,
-            tags,
-            events,
+            Parameters,
+            Tags,
+            Events,
         }
     }
 }

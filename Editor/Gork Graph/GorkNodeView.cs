@@ -238,6 +238,8 @@ namespace Gork.Editor
         public void SetExpanded()
         {
             expanded = Node.Expanded;
+
+            RefreshExpandedState();
         }
 
         private void BuildNode()
@@ -282,6 +284,9 @@ namespace Gork.Editor
             inputContainer.Clear();
             outputContainer.Clear();
             extensionContainer.Clear();
+
+            Node.InputPorts.Clear();
+            Node.OutputPorts.Clear();
         }
 
         private void ChangeAttribute(int attributeID, bool rebuildNode = true)
@@ -655,6 +660,8 @@ namespace Gork.Editor
 
             FillPorts(true, newInputPortAmount, oldInputPortAmount, Node.InputPorts);
             FillPorts(false, newOutputPortAmount, oldOutputPortAmount, Node.OutputPorts);
+
+            RefreshExpandedState();
         }
 
         public override void BuildContextualMenu(ContextualMenuPopulateEvent evt)
