@@ -544,6 +544,9 @@ namespace Gork
             }
         }
 
+        /// <summary>
+        /// Returns a list of all the nodes that have the given <paramref name="tag"/>. Will return null if there are no nodes with the given <paramref name="tag"/>.
+        /// </summary>
         public List<GorkNode> GetNodesWithTag(string tag)
         {
             if (NodeTagCache.TryGetValue(tag, out List<GorkNode> list))

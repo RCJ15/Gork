@@ -10,7 +10,7 @@ using UnityEngine.UIElements;
 namespace Gork.Editor
 {
     /// <summary>
-    /// 
+    /// The side panel of the <see cref="GorkGraphEditor"/> which displays Parameters, Tags and Events.
     /// </summary>
     public class GorkInspectorView : VisualElement
     {
@@ -18,8 +18,17 @@ namespace Gork.Editor
         private static Texture2D _dropdownTexture = null;
 
         private static GenericMenu _createParameterMenu, _createEventMenu = null;
-        
+
         private ModeEnum _mode;
+        private ModeEnum mode
+        {
+            get => _mode;
+            set
+            {
+                _mode = value;
+                GorkEditorSaveData.CurrentInspectorMode = (int)_mode;
+            }
+        }
 
         private string _searchFilterString = "";
         private Type _parametersSearchFilter = null;
@@ -236,6 +245,8 @@ namespace Gork.Editor
 
         public GorkInspectorView()
         {
+            mode = (ModeEnum)GorkEditorSaveData.CurrentInspectorMode;
+
             RegisterCallback<MouseUpEvent>(HandleRightClick);
         }
 
@@ -252,7 +263,7 @@ namespace Gork.Editor
             Action<int> duplicateElement;
             Action<int> removeElement; 
 
-            switch (_mode)
+            switch (mode)
             {
                 default:
                     prop = ParametersList.serializedProperty;
@@ -316,7 +327,7 @@ namespace Gork.Editor
             VisualElement tagsHighlight = tagsButton.Q<VisualElement>("Highlight");
             VisualElement eventsHighlight = eventsButton.Q<VisualElement>("Highlight");
 
-            void ParameterButtonColorChange()
+            void ParametersButtonColorChange()
             {
                 parameterHighlight.visible = true;
                 tagsHighlight.visible = false;
@@ -337,32 +348,43 @@ namespace Gork.Editor
                 eventsHighlight.visible = true;
             }
 
-            ParameterButtonColorChange();
+            switch (_mode)
+            {
+                case ModeEnum.Parameters:
+                    ParametersButtonColorChange();
+                    break;
+                case ModeEnum.Tags:
+                    TagsButtonColorChange();
+                    break;
+                case ModeEnum.Events:
+                    EventsButtonColorChange();
+                    break;
+            }
 
             parameterButton.clicked += () =>
             {
-                if (_mode == ModeEnum.Parameters)
+                if (mode == ModeEnum.Parameters)
                 {
                     return;
                 }
 
-                ParameterButtonColorChange();
+                ParametersButtonColorChange();
 
-                _mode = ModeEnum.Parameters;
+                mode = ModeEnum.Parameters;
 
                 UpdateParametersSearchList();
             };
 
             tagsButton.clicked += () =>
             {
-                if (_mode == ModeEnum.Tags)
+                if (mode == ModeEnum.Tags)
                 {
                     return;
                 }
 
                 TagsButtonColorChange();
 
-                _mode = ModeEnum.Tags;
+                mode = ModeEnum.Tags;
 
                 _parametersSearchFilter = null;
                 UpdateTagsSearchList();
@@ -370,14 +392,14 @@ namespace Gork.Editor
 
             eventsButton.clicked += () =>
             {
-                if (_mode == ModeEnum.Events)
+                if (mode == ModeEnum.Events)
                 {
                     return;
                 }
 
                 EventsButtonColorChange();
 
-                _mode = ModeEnum.Events;
+                mode = ModeEnum.Events;
 
                 _parametersSearchFilter = null;
             };
@@ -446,7 +468,7 @@ namespace Gork.Editor
                 Rect addButtonRect = new Rect(addButton.LocalToWorld(Vector2.zero), addButton.contentRect.size * 1.5f);
 
                 // Spawn the correct dropdown based on which mode is currently active
-                switch (_mode)
+                switch (mode)
                 {
                     case ModeEnum.Parameters:
                         _createParameterMenu.DropDown(addButtonRect);
@@ -475,7 +497,7 @@ namespace Gork.Editor
                 // Filter!
                 _searchFilterString = text.newValue;
 
-                switch (_mode)
+                switch (mode)
                 {
                     case ModeEnum.Parameters:
                         UpdateParametersSearchList();
@@ -498,7 +520,7 @@ namespace Gork.Editor
 
                 // Spawn the correct dropdown based on which mode is currently active
                 // These menus can't be cached since the entries in the menus will display if they are selected or not which can't be edited once the menu is created (stupid Unity thing)
-                switch (_mode)
+                switch (mode)
                 {
                     case ModeEnum.Parameters:
                         #region Create Filter Parameters Menu
@@ -591,7 +613,7 @@ namespace Gork.Editor
             ReorderableList list;
             ReorderableList searchList;
 
-            switch (_mode)
+            switch (mode)
             {
                 default:
                     list = ParametersList;
@@ -613,7 +635,7 @@ namespace Gork.Editor
 
             Rect contentRect = _imguiContainer.parent.contentRect;
 
-            bool displaySearchBar = (_mode == ModeEnum.Parameters && _parametersSearchFilter != null) || (_mode == ModeEnum.Events && _eventsSearchFilter.HasValue) || !string.IsNullOrEmpty(_searchFilterString);
+            bool displaySearchBar = (mode == ModeEnum.Parameters && _parametersSearchFilter != null) || (mode == ModeEnum.Events && _eventsSearchFilter.HasValue) || !string.IsNullOrEmpty(_searchFilterString);
 
             // Position list so the remove button isn't shown as it looks pretty ugly
             Rect rect = EditorGUILayout.GetControlRect();
@@ -1081,6 +1103,11 @@ namespace Gork.Editor
         private static readonly string StringAssemblyQualifiedName = typeof(string).AssemblyQualifiedName;
         private float GetParameterElementHeight(int index)
         {
+            if (index >= ParametersList.serializedProperty.arraySize)
+            {
+                return LIST_ELEMENT_SIZE;
+            }
+
             SerializedProperty prop = ParametersList.serializedProperty.GetArrayElementAtIndex(index);
 
             string typeName = prop.FindPropertyRelative("SerializedType").stringValue;

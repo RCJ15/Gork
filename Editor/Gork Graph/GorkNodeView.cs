@@ -39,22 +39,23 @@ namespace Gork.Editor
         public List<GorkPort> OutputPorts = new List<GorkPort>();
 
         //-- Question Mark Button
+        private static VisualTreeAsset _questionMarkButtonVisualTree = null;
+
         private const string QUESTION_MARK_ICON = "iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAEfSURBVEhL3ZU/S0JRHIbvdZaGHBxCaGuSRIKaWhxCHBpbnAra+hoOfg4bJJr7FEFcaDedFZcgaLg995z3lv/i6PEs+sDD673nx3sO3otGO0+s/Jc0TevEGQ5xkBnH8RcZBja4x0Ve8FIj20HRqg1yHjXmDyXX2MUnfMVFuhoNA4UNHJrqP061HAYKb2zvL3daWqKg3Ajeoj4xsVeGY+USXhtw4hpxaK8MidIfSi9kGxPM+cQjjflBwZWpWs2Dxvyh5Nx2zfGGTY1sB0UnptIyxoqWnKz7kKfKjG/eopE+O9lkgw85zm7sFnznRXzGAXZ0OxyU9nCWWy05WfcZFJU5B8owcOKWPbjhHctacuL8y8yhtEqUMOE1nf2h22ui6AeEKjbxXhYw8QAAAABJRU5ErkJggg==";
 
         private static Texture2D _cachedQuestionMarkIcon;
 
         private static readonly Color _buttonSelectedColor = new Color(0.168627f, 0.168627f, 0.168627f);
 
-        private static readonly PropertyInfo[] _iStylePropeties = typeof(IStyle).GetProperties();
+        //private static readonly PropertyInfo[] _iStylePropeties = typeof(IStyle).GetProperties();
 
         //-- Tag Display
-        public static bool DisplayTags = true;
-
         private VisualElement _tagDisplay;
         private ScrollView _scrollView;
-        private VisualTreeAsset _tagLabelTemplate;
-        private VisualTreeAsset _tagLabelArrowTemplate;
-
+        private static VisualTreeAsset _tagDisplayVisualTree = null;
+        private static VisualTreeAsset _tagLabelTemplate = null;
+        private static VisualTreeAsset _tagLabelArrowTemplate = null;
+        
         private static readonly Color _tagArrowSelectedColor = new Color(0.4f, 0.4f, 0.4f, 1f);
         private static readonly Color _tagArrowUnselectedColor = new Color(0.254901f, 0.254901f, 0.254901f, 1);
 
@@ -74,52 +75,41 @@ namespace Gork.Editor
             // Cache the node type
             _nodeType = Node.GetType();
 
-            #region Question Mark Button
-            // Create the question mark button which will open up the documentation for a node
-            VisualElement questionMarkButton = new VisualElement();
-            Image icon = new Image();
-
-            // Copy the properties from the collapsable button to the question mark button as they are going to look the same
-            foreach (PropertyInfo prop in _iStylePropeties)
+            #region Load Visual Tree Assets
+            // Question Mark Button
+            if (_questionMarkButtonVisualTree == null)
             {
-                prop.SetValue(questionMarkButton.style, prop.GetValue(m_CollapseButton.style));
+                _questionMarkButtonVisualTree = GorkGraphEditor.GetVisualTree("QuestionMarkButton");
             }
 
-            // Setup
-            questionMarkButton.focusable = false;
-            questionMarkButton.style.width = 32;
+            // Tags
+            if (_tagDisplayVisualTree == null)
+            {
+                _tagDisplayVisualTree = GorkGraphEditor.GetVisualTree("TagDisplay");
+            }
+            if (_tagLabelTemplate == null)
+            {
+                _tagLabelTemplate = GorkGraphEditor.GetVisualTree("TagLabel");
+            }
+            if (_tagLabelArrowTemplate == null)
+            {
+                _tagLabelArrowTemplate = GorkGraphEditor.GetVisualTree("TagLabelArrows");
+            }
+            #endregion
 
-            // Add the the question mark button
-            titleButtonContainer.Add(questionMarkButton);
+            #region Question Mark Button
+            // Create the question mark button which will open up the documentation popup window for this node type
+            _questionMarkButtonVisualTree.CloneTree(titleButtonContainer);
+            VisualElement questionMarkButton = titleButtonContainer.Q<VisualElement>("QuestionMarkButton");
+            VisualElement icon = questionMarkButton.Q<VisualElement>("Icon");
 
-            questionMarkButton.style.alignContent = Align.Center;
-            
-            // Add icon visual element to the question mark button
-            questionMarkButton.Add(icon);
-
-            // Make the icon smaller
-            icon.style.width = 12;
-            icon.style.height = 12;
-
-            // Center the icon
-            icon.style.alignSelf = Align.Center;
-            icon.style.left = 3;
-            icon.style.top = 12;
-
-            // Set the round corners of the icon to 1 to make the button sligtly rounder and match the collapse button as well
-            icon.style.borderTopLeftRadius = 1;
-            icon.style.borderTopRightRadius = 1;
-            icon.style.borderBottomLeftRadius = 1;
-            icon.style.borderBottomRightRadius = 1;
-
-            // Load image from base64 if they are null
+            // Load the question mark icon image from base64 if it's null
             if (_cachedQuestionMarkIcon == null)
             {
                 _cachedQuestionMarkIcon = GorkEditorUtility.Texture2DFromBase64(QUESTION_MARK_ICON);
             }
 
-            // Set the image on the icon
-            icon.image = _cachedQuestionMarkIcon;
+            icon.style.backgroundImage = _cachedQuestionMarkIcon;
             icon.style.opacity = 0.5f;
 
             // Open up the documentation when the question mark button is pressed
@@ -158,14 +148,10 @@ namespace Gork.Editor
             #region Tag Display
             _tagDisplay = contentContainer.Q<VisualElement>("divider");
 
-            // Clone visual tree
-            VisualTreeAsset tagDisplayVisualTree = GorkGraphEditor.GetVisualTree("TagDisplay");
-            tagDisplayVisualTree.CloneTree(_tagDisplay);
+            // Clone the tag visual tree
+            _tagDisplayVisualTree.CloneTree(_tagDisplay);
 
             _scrollView = _tagDisplay.Q<ScrollView>("TagsContainer");
-
-            _tagLabelTemplate = GorkGraphEditor.GetVisualTree("TagLabel");
-            _tagLabelArrowTemplate = GorkGraphEditor.GetVisualTree("TagLabelArrows");
 
             _scrollView.generateVisualContent += _ => UpdateTagSize();
             #endregion
@@ -516,7 +502,7 @@ namespace Gork.Editor
 
         public void UpdateTagSize()
         {
-            if (!expanded || !DisplayTags || Node.Tags.Count <= 0)
+            if (!expanded || !GorkEditorSaveData.DisplayTags || Node.Tags.Count <= 0)
             {
                 _tagDisplay.style.height = 0;
                 return;

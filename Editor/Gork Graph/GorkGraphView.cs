@@ -21,7 +21,6 @@ namespace Gork.Editor
 
         public GorkGraph Graph;
         public string GraphPath => AssetDatabase.GetAssetPath(Graph);
-        public GUID GraphGUID(string assetPath) => AssetDatabase.GUIDFromAssetPath(assetPath);
         private GorkNodeSearchWindow _searchWindow;
         public GorkNodeSearchWindow GorkSearchWindow => _searchWindow;
 
@@ -59,17 +58,20 @@ namespace Gork.Editor
             // Open search window when node creation is requested
             //nodeCreationRequest = context => OpenNodeCreationSearchWindow(context);
 
+            viewTransformChanged += _ => SaveScrollAndZoomData();
+
             #region Create minimap
             _miniMap = new MiniMap()
             {
-                anchored = true
+                anchored = GorkEditorSaveData.MinimapAnchored,
             };
 
-            _miniMap.SetPosition(new Rect(15, 25, 200, 180));
+            _miniMap.SetPosition(GorkEditorSaveData.MinimapRect);
+            _miniMap.generateVisualContent += _ => SaveMinimapData();
 
             Add(_miniMap);
 
-            _miniMap.visible = false;
+            _miniMap.visible = GorkEditorSaveData.DisplayMinimap;
 
             StyleColor backgroundColor = new StyleColor(new Color32(29, 29, 30, 255));
             StyleColor borderColor = new StyleColor(new Color32(51, 51, 51, 255));
@@ -103,6 +105,8 @@ namespace Gork.Editor
         public void ToggleMiniMap()
         {
             _miniMap.visible = !_miniMap.visible;
+
+            GorkEditorSaveData.DisplayMinimap = _miniMap.visible;
         }
 
         private void OnMouseMoveEvent(MouseMoveEvent evt)
@@ -118,29 +122,31 @@ namespace Gork.Editor
             PasteData pasteData = null;
             bool duplicated = false;
 
+            string cmdName = evt.commandName;
+
             //-- Copy & Paste
-            if (evt.commandName == "Copy")
+            if (cmdName == "Copy")
             {
                 CopySelection(ref pasteData);
             }
-            else if (evt.commandName == "Paste")
+            else if (cmdName == "Paste")
             {
                 //Paste(-contentViewContainer.WorldToLocal(_cachedMousePos));
                 //Paste(-_cachedMousePos);
                 Paste(MousePos);
             }
-            else if (evt.commandName == "Cut")
+            else if (cmdName == "Cut")
             {
                 Cut(ref pasteData);
             }
-            else if (evt.commandName == "Duplicate")
+            else if (cmdName == "Duplicate")
             {
                 Duplicate(ref pasteData);
                 duplicated = true;
             }
             //-- Misc
             // Select All
-            else if (evt.commandName == "SelectAll")
+            else if (cmdName == "SelectAll")
             {
                 // Loop through all elements
                 foreach (GraphElement element in graphElements)
@@ -155,7 +161,7 @@ namespace Gork.Editor
                 }
             }
             // Delete selection
-            else if (evt.commandName == "Delete" || evt.commandName == "SoftDelete")
+            else if (cmdName == "Delete" || cmdName == "SoftDelete")
             {
                 List<GraphElement> elementsToRemove = new List<GraphElement>();
 
@@ -210,7 +216,7 @@ namespace Gork.Editor
 
             string assetPath = GraphPath;
 
-            AssetDatabase.SaveAssetIfDirty(GraphGUID(assetPath));
+            AssetDatabase.SaveAssetIfDirty(AssetDatabase.GUIDFromAssetPath(assetPath));
 
             if (reimportAsset)
             {
@@ -249,13 +255,16 @@ namespace Gork.Editor
         /// <summary>
         /// Removes all previous elements and opens a new <see cref="GorkGraph"/> to edit.
         /// </summary>
-        public void OpenGraph(GorkGraph graph)
+        public void OpenGraph(GorkGraph graph, bool frameAll = false)
         {
             // Set the graph variable
             Graph = graph;
 
+            SaveCurrentlyEditingGraph();
+
             RemoveAllElements();
 
+            // Remove all empty nodes from the graph to ensure no weird things
             Graph.Nodes.RemoveAll(node => node == null);
 
             // Create all nodes in the GraphView by looping through all of the nodes in the graph
@@ -342,6 +351,53 @@ namespace Gork.Editor
 
                 group.Enabled = true;
             });
+
+            // Update scroll position and zoom scale
+            if (frameAll)
+            {
+                CustomFrameAll();
+            }
+            else
+            {
+                LoadScrollAndZoomData();
+            }
+        }
+
+        /// <summary>
+        /// A custom FrameAll() that's different from <see cref="GraphView.FrameAll"/> by recursively calling itself every frame until it succeeds. <para/>
+        /// It also saves it's result to the <see cref="GorkEditorSaveData"/> class upon success.
+        /// </summary>
+        private void CustomFrameAll()
+        {
+            void Delay()
+            {
+                // Unsubscribe this method from the call
+                EditorApplication.delayCall -= Delay;
+                
+                // Woah recursion
+                CustomFrameAll();
+            }
+
+            Rect rectToFit = CalculateRectToFitAll(contentViewContainer);
+
+            // Things haven't been loaded in yet
+            if (float.IsNaN(rectToFit.x) || float.IsNaN(rectToFit.y) || float.IsNaN(rectToFit.width) || float.IsNaN(rectToFit.height))
+            {
+                // Mark for repaint and delay this entire method by 1 frame using the EditorApplication.delayCall callback
+                MarkDirtyRepaint();
+                EditorApplication.delayCall += Delay;
+                return;
+            }
+
+            Vector3 frameTranslation;
+            Vector3 frameScaling;
+            CalculateFrameTransform(rectToFit, layout, 30, out frameTranslation, out frameScaling);
+
+            viewTransform.position = frameTranslation;
+
+            viewTransform.scale = frameScaling;
+
+            SaveScrollAndZoomData();
         }
 
         /// <summary>
@@ -480,15 +536,48 @@ namespace Gork.Editor
             return change;
         }
 
+        #region Saving And Loading Data
+        public void SaveScrollAndZoomData()
+        {
+            GorkEditorSaveData.ScrollPosition = viewTransform.position;
+            GorkEditorSaveData.ZoomScale = (viewTransform.scale.x + viewTransform.scale.y) / 2;
+        }
+
+        public void SaveMinimapData()
+        {
+            GorkEditorSaveData.MinimapRect = _miniMap.GetPosition();
+            GorkEditorSaveData.MinimapAnchored = _miniMap.anchored;
+        }
+
+        public void SaveCurrentlyEditingGraph()
+        {
+            if (Graph == null)
+            {
+                GorkEditorSaveData.CurrentlyEditingGraph = "";
+                return;
+            }
+
+            GorkEditorSaveData.CurrentlyEditingGraph = AssetDatabase.AssetPathToGUID(GraphPath);
+        }
+
+        public void LoadScrollAndZoomData()
+        {
+            // Update scroll position and zoom scale to match save data
+            viewTransform.position = GorkEditorSaveData.ScrollPosition;
+
+            float zoomScale = GorkEditorSaveData.ZoomScale;
+            viewTransform.scale = new Vector3(zoomScale, zoomScale, 1);
+        }
+        #endregion
+
         public override void BuildContextualMenu(ContextualMenuPopulateEvent evt)
         {
             DropdownMenu menu = evt.menu;
 
-            // Add seperator if the menu already has some elements
+            // Return if there are already some items in the menu
             if (menu.MenuItems().Count > 0)
             {
                 return;
-                //menu.AppendSeparator();
             }
 
             //base.BuildContextualMenu(evt);
@@ -574,7 +663,7 @@ namespace Gork.Editor
             // Add a toggle to display tags on nodes
             menu.AppendAction("Display Tags", _ =>
             {
-                GorkNodeView.DisplayTags = !GorkNodeView.DisplayTags;
+                GorkEditorSaveData.DisplayTags = !GorkEditorSaveData.DisplayTags;
 
                 // Update all the nodes in the graph
                 foreach (GorkNodeView node in graphElements.OfType<GorkNodeView>())
@@ -582,7 +671,7 @@ namespace Gork.Editor
                     node.UpdateTagSize();
                 }
 
-            }, GorkNodeView.DisplayTags ? DropdownMenuAction.Status.Checked : DropdownMenuAction.Status.Normal);
+            }, GorkEditorSaveData.DisplayTags ? DropdownMenuAction.Status.Checked : DropdownMenuAction.Status.Normal);
 
             PasteData pasteData = null;
 
