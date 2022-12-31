@@ -12,11 +12,21 @@ namespace Gork
     /// Uses <see cref="string.Format(string, object[])"/> and will give the output of the method. <para/>
     /// This node will automatically detect if you have put a "{0}" or "{391}" in your text and will add dynamically add an input port for each unique "{0}" it can find.
     /// </summary>
-    [GorkNodeInfo("Operations/String Format", GorkColors.STRING_COLOR, 100)]
+    [GorkNodeInfo("Operations/String Format", GorkColors.STRING_COLOR, 100, WikiSummary = "Outputs a string that can include multiple different argument values",
+        WikiDescription = "This node functions like how <i>\"string.Format\"</i> works in c#.\n" +
+        "You are given a field to insert a string, which is going to be the format that this node will output.\n" +
+        "The format string can include numbers sorounded by curly brackets. <b>Example:</b>\n<i>\"This is a example with {1} that {4} but also {428}\"</i>\n\n" +
+        "Each curly bracket number is called an <i><b>\"Argument\"</b></i> and for each unique argument in your format string, a corresponding string input port will appear.\n" +
+        "Each new input port will have it's name be the same as the argument it represents.\n" +
+        "When this node is asked to output, it'll compile all of the arguments together into the format string.",
+        WikiInputPorts = "This node has a dynamic number of input ports that change depending on the amount of unique arguments present in the format string.\n" +
+        "Each new input port will have it's name be the same as the argument it represents.",
+        WikiUsage = "Use this node like how you would use a <i>\"string.Format\"</i> in regular code")]
     [GorkInputPort("Input", typeof(string))]
     [GorkOutputPort("Result", typeof(string))]
     public class StringFormatNode : GorkNode
     {
+        [GorkWikiInfo("The format that this node is going to use.\nEach unique argument present in this string will create a new string input port that corresponds to one of the arguments in this string")]
         [TextArea(3, 6)]
         public string Format = "Insert a formatted string here using: {0} or {1}";
         [SerializeField] private int highestArgId = 0;

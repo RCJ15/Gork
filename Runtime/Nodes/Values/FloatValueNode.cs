@@ -1,4 +1,3 @@
-using System;
 #if UNITY_EDITOR
 using UnityEditor;
 using UnityEditor.Experimental.GraphView;
@@ -9,13 +8,16 @@ using UnityEngine.UIElements;
 namespace Gork
 {
     /// <summary>
-    /// Gives a constant <see cref="float"/> value.
+    /// Gives out a constant <see cref="float"/> value.
     /// </summary>
-    [GorkNodeInfo("Values/Float Value", GorkColors.FLOAT_COLOR, 0)]
+    [GorkNodeInfo("Values/Float Value", GorkColors.FLOAT_COLOR, 0, WikiSummary = "Gives out a constant float value",
+        WikiDescription = "Float values can handle up to 7 decimals at once",
+        WikiUsage = "Use this like a float field")]
     [NoInputPorts]
     [GorkOutputPort("Value", typeof(float))]
     public class FloatValueNode : GorkNode
     {
+        [GorkWikiInfo("The float value of this node")]
         public float Value;
 
 #if UNITY_EDITOR

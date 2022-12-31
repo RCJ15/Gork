@@ -1,10 +1,11 @@
 using System;
+using System.Text;
 using UnityEngine;
-
-#if UNITY_EDITOR
 using System.Collections.Generic;
 using System.Reflection;
 using System.Linq;
+
+#if UNITY_EDITOR
 using UnityEditor;
 #endif
 
@@ -23,14 +24,28 @@ namespace Gork
         private (float, float, float)? _color = null;
         public int Order;
 
+        public bool HasWiki => !string.IsNullOrEmpty(DisplayName) && 
+            (!string.IsNullOrEmpty(WikiSummary) || !string.IsNullOrEmpty(WikiDescription) || 
+            !string.IsNullOrEmpty(WikiFields) || !string.IsNullOrEmpty(WikiMethods) || 
+            !string.IsNullOrEmpty(WikiInputPorts) || !string.IsNullOrEmpty(WikiOutputPorts) || 
+            !string.IsNullOrEmpty(WikiUsage));
+
+        public string WikiName = null;
+        public string WikiSummary = null;
+        public string WikiDescription = null;
+        public string WikiFields = null;
+        public string WikiMethods= null;
+        public string WikiInputPorts = null;
+        public string WikiOutputPorts = null;
+        public string WikiUsage = null;
+
         public GorkNodeInfoAttribute() { }
 
         public GorkNodeInfoAttribute(string name)
         {
             DisplayName = name;
 
-            string[] split = name.Split('/');
-            NodeName = split[split.Length - 1];
+            NodeName = name.Substring(name.LastIndexOf('/') + 1);
         }
 
         public GorkNodeInfoAttribute(string name, int order) : this(name)
@@ -88,12 +103,12 @@ namespace Gork
         /// <summary>
         /// A static <see cref="Dictionary{TKey, TValue}"/> of the <see cref="GorkNodeInfoAttribute"/> and which <see cref="Type"/> they belong to.
         /// </summary>
-        public static Dictionary<GorkNodeInfoAttribute, Type> AttributeTypes = new Dictionary<GorkNodeInfoAttribute, Type>();
+        public static readonly Dictionary<GorkNodeInfoAttribute, Type> AttributeTypes = new Dictionary<GorkNodeInfoAttribute, Type>();
 
         /// <summary>
         /// A static <see cref="Dictionary{TKey, TValue}"/> of all the <see cref="Type"/> that have a <see cref="GorkNodeInfoAttribute"/> attached.
         /// </summary>
-        public static Dictionary<Type, List<GorkNodeInfoAttribute>> TypeAttributes = new Dictionary<Type, List<GorkNodeInfoAttribute>>();
+        public static readonly Dictionary<Type, List<GorkNodeInfoAttribute>> TypeAttributes = new Dictionary<Type, List<GorkNodeInfoAttribute>>();
 
         [InitializeOnLoadMethod]
         private static void CacheTypes()
@@ -138,6 +153,8 @@ namespace Gork
         public string PortName = "Input";
         public Type PortType = GorkUtility.SignalType;
 
+        public string WikiDescription = null;
+
         public GorkPortAttribute(string portName, Type portType)
         {
             PortName = portName;
@@ -165,7 +182,7 @@ namespace Gork
         /// <summary>
         /// A static <see cref="Dictionary{TKey, TValue}"/> of all the <see cref="Type"/> and all of their <see cref="GorkInputPortAttribute"/> attached.
         /// </summary>
-        public static Dictionary<Type, GorkInputPortAttribute[]> Attributes = new Dictionary<Type, GorkInputPortAttribute[]>();
+        public static readonly Dictionary<Type, GorkInputPortAttribute[]> Attributes = new Dictionary<Type, GorkInputPortAttribute[]>();
 
         [InitializeOnLoadMethod]
         private static void CacheTypes()
@@ -198,7 +215,7 @@ namespace Gork
         /// <summary>
         /// A static <see cref="Dictionary{TKey, TValue}"/> of all the <see cref="Type"/> and all of their <see cref="GorkOutputPortAttribute"/> attached.
         /// </summary>
-        public static Dictionary<Type, GorkOutputPortAttribute[]> Attributes = new Dictionary<Type, GorkOutputPortAttribute[]>();
+        public static readonly Dictionary<Type, GorkOutputPortAttribute[]> Attributes = new Dictionary<Type, GorkOutputPortAttribute[]>();
 
         [InitializeOnLoadMethod]
         private static void CacheTypes()
@@ -223,7 +240,7 @@ namespace Gork
         /// <summary>
         /// A static <see cref="Dictionary{TKey, TValue}"/> of all the <see cref="Type"/> and all of their <see cref="NoInputPortsAttribute"/> attached.
         /// </summary>
-        public static Dictionary<Type, NoInputPortsAttribute[]> Attributes = new Dictionary<Type, NoInputPortsAttribute[]>();
+        public static readonly Dictionary<Type, NoInputPortsAttribute[]> Attributes = new Dictionary<Type, NoInputPortsAttribute[]>();
 
         [InitializeOnLoadMethod]
         private static void CacheTypes()
@@ -248,7 +265,7 @@ namespace Gork
         /// <summary>
         /// A static <see cref="Dictionary{TKey, TValue}"/> of all the <see cref="Type"/> and all of their <see cref="NoOutputPortsAttribute"/> attached.
         /// </summary>
-        public static Dictionary<Type, NoOutputPortsAttribute[]> Attributes = new Dictionary<Type, NoOutputPortsAttribute[]>();
+        public static readonly Dictionary<Type, NoOutputPortsAttribute[]> Attributes = new Dictionary<Type, NoOutputPortsAttribute[]>();
 
         [InitializeOnLoadMethod]
         private static void CacheTypes()
@@ -309,7 +326,7 @@ namespace Gork
         /// <summary>
         /// A static <see cref="Dictionary{TKey, TValue}"/> of all the <see cref="Type"/> and all of their <see cref="GorkPortColorAttribute"/> attached.
         /// </summary>
-        public static Dictionary<Type, GorkPortColorAttribute> Attributes = new Dictionary<Type, GorkPortColorAttribute>();
+        public static readonly Dictionary<Type, GorkPortColorAttribute> Attributes = new Dictionary<Type, GorkPortColorAttribute>();
 
         [InitializeOnLoadMethod]
         private static void CacheTypes()
@@ -339,7 +356,8 @@ namespace Gork
 
     /// <summary>
     /// Use this <see cref="Attribute"/> to mark a Class as a Gork Converter. <para/>
-    /// Then when you have marked the class, also mark a STATIC method that takes in a SINGLE parameter and RETURNS some value to create a GorkConvertion.
+    /// Then when you have marked the class, also mark a STATIC method that takes in a SINGLE parameter and RETURNS some value to create a GorkConvertion. <para/>
+    /// See example for Float to Int here: <see cref="BaseGorkConvertions"/>.
     /// </summary>
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, AllowMultiple = false, Inherited = true)]
     public class GorkConverterAttribute : Attribute
@@ -347,13 +365,13 @@ namespace Gork
         /// <summary>
         /// A static <see cref="Dictionary{TKey, TValue}"/> of all the <see cref="Type"/> and all of their <see cref="GorkConverterAttribute"/> attached.
         /// </summary>
-        public static Dictionary<Type, GorkConverterAttribute> Attributes = new Dictionary<Type, GorkConverterAttribute>();
+        public static readonly Dictionary<Type, GorkConverterAttribute> Attributes = new Dictionary<Type, GorkConverterAttribute>();
 
-        public static Dictionary<Type, List<MethodInfo>> ConverterMethods = new Dictionary<Type, List<MethodInfo>>();
-        public static Dictionary<MethodInfo, Type> ParameterType = new Dictionary<MethodInfo, Type>();
-        public static Dictionary<MethodInfo, Type> ReturnType = new Dictionary<MethodInfo, Type>();
+        public static readonly Dictionary<Type, List<MethodInfo>> ConverterMethods = new Dictionary<Type, List<MethodInfo>>();
+        public static readonly Dictionary<MethodInfo, Type> ParameterType = new Dictionary<MethodInfo, Type>();
+        public static readonly Dictionary<MethodInfo, Type> ReturnType = new Dictionary<MethodInfo, Type>();
 
-        public static Dictionary<Type, Dictionary<Type, MethodInfo>> GorkConvertion = new Dictionary<Type, Dictionary<Type, MethodInfo>>();
+        public static readonly Dictionary<Type, Dictionary<Type, MethodInfo>> GorkConvertion = new Dictionary<Type, Dictionary<Type, MethodInfo>>();
 
 #if UNITY_EDITOR
         [InitializeOnLoadMethod]
@@ -444,5 +462,189 @@ namespace Gork
 
             //-- Done Assembly Loop
         }
+    }
+
+    /// <summary>
+    /// Use this <see cref="Attribute"/> in a <see cref="GorkNode"/> field or method to make it appear in the Nodes Gork Wiki Page. <para/>
+    /// Do note that you have to add wiki information to the node via the <see cref="GorkNodeInfoAttribute"/>.
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Field | AttributeTargets.Method, AllowMultiple = false, Inherited = true)]
+    public class GorkWikiInfoAttribute : Attribute
+    {
+        public string DisplayName = null;
+        public bool DisplayType = true;
+        public string Description = null;
+
+        public GorkWikiInfoAttribute(string description)
+        {
+            Description = description;
+        }
+
+#if UNITY_EDITOR
+        public static string GetTypeName(Type type)
+        {
+            if (type == typeof(float))
+            {
+                return "Float";
+            }
+            else if (type == typeof(int))
+            {
+                return "Int";
+            }
+            else if (type == typeof(bool))
+            {
+                return "Bool";
+            }
+            else
+            {
+                return type.Name;
+            }
+        }
+
+        public void DisplayField(StringBuilder builder, FieldInfo field)
+        {
+            builder.Append("<b>");
+
+            if (string.IsNullOrEmpty(DisplayName))
+            {
+                builder.Append(field.Name);
+            }
+            else
+            {
+                builder.Append(DisplayName);
+            }
+
+            if (DisplayType)
+            {
+                builder.Append(" (");
+                builder.Append(GetTypeName(field.FieldType));
+                builder.Append(')');
+            }
+
+            builder.Append("</b> - ");
+
+            builder.Append(Description);
+
+            if (!Description.EndsWith('.'))
+            {
+                builder.Append('.');
+            }
+
+            builder.AppendLine();
+        }
+        public void DisplayMethod(StringBuilder builder, MethodInfo method)
+        {
+            builder.Append("<b>");
+
+            if (DisplayType)
+            {
+                builder.Append(GetTypeName(method.ReturnType));
+                builder.Append(' ');
+            }
+
+            if (string.IsNullOrEmpty(DisplayName))
+            {
+                builder.Append(method.Name);
+            }
+            else
+            {
+                builder.Append(DisplayName);
+            }
+
+            if (DisplayType)
+            {
+                ParameterInfo[] parameters = method.GetParameters();
+                int length = parameters.Length;
+
+                for (int i = 0; i < length; i++)
+                {
+                    if (i == 0)
+                    {
+                        builder.Append('(');
+                    }
+                    else if (i < length - 1)
+                    {
+                        builder.Append(", ");
+                    }
+
+                    ParameterInfo parameter = parameters[i];
+
+                    builder.Append(GetTypeName(parameter.ParameterType));
+
+                    if (i == length - 1)
+                    {
+                        builder.Append(")");
+                    }
+                }
+            }
+
+            builder.Append("</b> - ");
+
+            builder.Append(Description);
+
+            if (!Description.EndsWith('.'))
+            {
+                builder.Append('.');
+            }
+
+            builder.AppendLine();
+        }
+
+        /// <summary>
+        /// A static <see cref="Dictionary{TKey, TValue}"/> of all the <see cref="Type"/> and all of their <see cref="FieldInfo"/> that have a <see cref="GorkWikiInfoAttribute"/> attached.
+        /// </summary>
+        public static readonly Dictionary<Type, List<FieldInfo>> TypeFields = new Dictionary<Type, List<FieldInfo>>();
+        /// <summary>
+        /// A static <see cref="Dictionary{TKey, TValue}"/> of all the <see cref="Type"/> and all of their <see cref="MethodInfo"/> that have a <see cref="GorkWikiInfoAttribute"/> attached.
+        /// </summary>
+        public static readonly Dictionary<Type, List<MethodInfo>> TypeMethods = new Dictionary<Type, List<MethodInfo>>();
+
+        /// <summary>
+        /// A static <see cref="Dictionary{TKey, TValue}"/> of all the <see cref="FieldInfo"/> that have a <see cref="GorkWikiInfoAttribute"/> attached.
+        /// </summary>
+        public static readonly Dictionary<FieldInfo, GorkWikiInfoAttribute> FieldAttributes = new Dictionary<FieldInfo, GorkWikiInfoAttribute>();
+        /// <summary>
+        /// A static <see cref="Dictionary{TKey, TValue}"/> of all the <see cref="MethodInfo"/> that have a <see cref="GorkWikiInfoAttribute"/> attached.
+        /// </summary>
+        public static readonly Dictionary<MethodInfo, GorkWikiInfoAttribute> MethodAttributes = new Dictionary<MethodInfo, GorkWikiInfoAttribute>();
+
+        [InitializeOnLoadMethod]
+        private static void CacheAttributes()
+        {
+            // Use the TypeCache to loop through all of the Fields with the GorkWikiInfoAttribute attached
+            foreach (FieldInfo field in TypeCache.GetFieldsWithAttribute<GorkWikiInfoAttribute>())
+            {
+                // Add the attribute and field to the Dictionary
+                FieldAttributes.Add(field, field.GetCustomAttribute<GorkWikiInfoAttribute>());
+
+                // Add the field to the TypeFields dictionary
+                Type reflectedType = field.ReflectedType;
+
+                if (!TypeFields.ContainsKey(reflectedType))
+                {
+                    TypeFields[reflectedType] = new List<FieldInfo>();
+                }
+
+                TypeFields[reflectedType].Add(field);
+            }
+
+            // Use the TypeCache to loop through all of the Methods with the GorkWikiInfoAttribute attached
+            foreach (MethodInfo method in TypeCache.GetMethodsWithAttribute<GorkWikiInfoAttribute>())
+            {
+                // Add the attribute and method to the Dictionary
+                MethodAttributes.Add(method, method.GetCustomAttribute<GorkWikiInfoAttribute>());
+
+                // Add the method to the TypeMethods dictionary
+                Type reflectedType = method.ReflectedType;
+
+                if (!TypeMethods.ContainsKey(reflectedType))
+                {
+                    TypeMethods[reflectedType] = new List<MethodInfo>();
+                }
+
+                TypeMethods[reflectedType].Add(method);
+            }
+        }
+#endif
     }
 }

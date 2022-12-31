@@ -87,7 +87,7 @@ namespace Gork
 
         private readonly Dictionary<Type, object> _cachedCastedGorkNodes = new Dictionary<Type, object>();
 
-        public List<T> GetAllNodesOfType<T>() where T : GorkNode
+        public List<T> GetNodesOfType<T>() where T : GorkNode
         {
             Type type = typeof(T);
 
@@ -96,7 +96,7 @@ namespace Gork
                 return (List<T>)_cachedCastedGorkNodes[type];
             }
 
-            List<GorkNode> nodes = GetAllNodesOfType(type);
+            List<GorkNode> nodes = GetNodesOfType(type);
 
             if (nodes == null)
             {
@@ -109,7 +109,7 @@ namespace Gork
 
             return list;
         }
-        public List<GorkNode> GetAllNodesOfType(Type nodeType)
+        public List<GorkNode> GetNodesOfType(Type nodeType)
         {
             if (GorkNodeDicitonary.ContainsKey(nodeType))
             {
@@ -118,10 +118,10 @@ namespace Gork
 
             return null;
         }
-        #endregion
+#endregion
 
-        #region Group Data
 #if UNITY_EDITOR
+#region Group Data
         [SerializeField] private List<GroupData> gorkGroups = new List<GroupData>();
         public List<GroupData> GorkGroups => gorkGroups;
 
@@ -172,8 +172,8 @@ namespace Gork
                 }
             }
         }
+#endregion
 #endif
-        #endregion
 
         /// <summary>
         /// Creates a <see cref="GorkNode"/> on this <see cref="GorkGraph"/> and returns it.
@@ -199,6 +199,10 @@ namespace Gork
             // Add node to list
             nodes.Add(node);
 
+#if UNITY_EDITOR
+            TryResetGetNodesMethods();
+#endif
+
             return node;
         }
 
@@ -206,6 +210,10 @@ namespace Gork
         {
             // Remove node from list
             nodes.Remove(node);
+
+#if UNITY_EDITOR
+            TryResetGetNodesMethods();
+#endif
         }
 
         public void AddConnection(GorkNode parent, int parentPort, GorkNode child, int childPort)
@@ -246,7 +254,7 @@ namespace Gork
             childList.Remove(new GorkNode.Connection(parentPort, parent));
         }
 
-        #region Parameters
+#region Parameters
         [SerializeField] private List<Parameter> _parameters = new List<Parameter>();
         public List<Parameter> Parameters => _parameters;
 
@@ -308,7 +316,7 @@ namespace Gork
             }
         }
 
-        #region Has Parameter
+#region Has Parameter
         /// <summary>
         /// Returns if a parameter with the given <paramref name="name"/> and <paramref name="type"/> exists or not.
         /// </summary>
@@ -347,9 +355,9 @@ namespace Gork
         /// Returns if a <see cref="string"/> parameter with the given <paramref name="name"/> exists or not.
         /// </summary>
         public bool HasString(string name) => HasParameter<string>(name);
-        #endregion
+#endregion
 
-        #region Get Parameter
+#region Get Parameter
         /// <summary>
         /// Returns the parameter with the type of <paramref name="type"/> and with the given <paramref name="name"/>.
         /// </summary>
@@ -387,9 +395,9 @@ namespace Gork
         /// Returns the <see cref="string"/> parameter with the given <paramref name="name"/>.
         /// </summary>
         public string GetString(string name) => GetParameter<string>(name);
-        #endregion
+#endregion
 
-        #region Set Parameter
+#region Set Parameter
         /// <summary>
         /// Sets the parameter with the type of <paramref name="type"/> and with the given <paramref name="name"/> to the given <paramref name="value"/>.
         /// </summary>
@@ -427,9 +435,9 @@ namespace Gork
         /// Sets the <see cref="string"/> parameter with the given <paramref name="name"/> to the given <paramref name="value"/>.
         /// </summary>
         public void SetString(string name, string value) => SetParameter(name, value);
-        #endregion
+#endregion
 
-        #region Reset Parameter
+#region Reset Parameter
         /// <summary>
         /// Resets the parameter with the type of <paramref name="type"/> and with the given <paramref name="name"/> to it's starting value set in the GorkEditorWindow.
         /// </summary>
@@ -481,7 +489,7 @@ namespace Gork
                 }
             }
         }
-        #endregion
+#endregion
 
         /// <summary>
         /// Class that contains data for a single parameter in a <see cref="GorkGraph"/>.
@@ -511,7 +519,7 @@ namespace Gork
                 Type = Type.GetType(SerializedType);
             }
         }
-        #endregion
+#endregion
 
         #region Tags
         [SerializeField] private List<string> _tags = new List<string>();
@@ -554,15 +562,55 @@ namespace Gork
                 return list;
             }
 
-#if UNITY_EDITOR
-            Debug.LogWarning($"Gork Graph \"{name}\" does not contain any nodes that have the tag \"{tag}\"!");
-#endif
-
             return null;
         }
-        #endregion
 
-        #region Events
+        private Dictionary<string, Dictionary<Type, object>> _nodeTagTypeCache = new Dictionary<string, Dictionary<Type, object>>();
+
+        /// <summary>
+        /// Returns a list of all the nodes that have the given <paramref name="tag"/> as well as the same node type as <typeparamref name="T"/>. Will return null if there are no nodes with the given <paramref name="tag"/>.
+        /// </summary>
+        public List<T> GetNodesWithTag<T>(string tag) where T : GorkNode
+        {
+            Type type = typeof(T);
+
+            if (_nodeTagTypeCache.ContainsKey(tag) && _nodeTagTypeCache[tag].ContainsKey(type))
+            {
+                return (List<T>)_nodeTagTypeCache[tag][type];
+            }
+
+            List<T> nonFilteredNodes = GetNodesOfType<T>();
+
+            if (nonFilteredNodes == null)
+            {
+                return null;
+            }
+
+            if (!_nodeTagTypeCache.ContainsKey(tag))
+            {
+                _nodeTagTypeCache[tag] = new Dictionary<Type, object>();
+            }
+
+            foreach (T node in nonFilteredNodes)
+            {
+                if (!node.Tags.Contains(tag))
+                {
+                    continue;
+                }
+
+                if (!_nodeTagTypeCache[tag].ContainsKey(type))
+                {
+                    _nodeTagTypeCache[tag][type] = new List<T>();
+                }
+
+                ((List<T>)_nodeTagTypeCache[tag][type]).Add(node);
+            }
+
+            return (List<T>)_nodeTagTypeCache[tag][type];
+        }
+#endregion
+
+#region Events
         public delegate void OnCallExternalEvent(string eventName, object parameter);
         public OnCallExternalEvent OnCallExternal;
 
@@ -576,7 +624,7 @@ namespace Gork
                 {
                     _internalEventNodesCache = new Dictionary<string, List<EventNode>>();
 
-                    foreach (EventNode node in GetAllNodesOfType<EventNode>())
+                    foreach (EventNode node in GetNodesOfType<EventNode>())
                     {
                         if (!node.IsInternal)
                         {
@@ -630,5 +678,25 @@ namespace Gork
             }
         }
         #endregion
+
+#if UNITY_EDITOR
+        public void TryResetGetNodesMethods()
+        {
+            if (!Application.isPlaying)
+            {
+                return;
+            }
+
+            Debug.Log("Reset things!!!");
+
+            // Get nodes of type
+            _cachedGorkNodeDictionary = null;
+            _cachedCastedGorkNodes.Clear();
+
+            // Get nodes with tag methods
+            _nodeTagCache = null;
+            _nodeTagTypeCache.Clear();
+        }
+#endif
     }
 }

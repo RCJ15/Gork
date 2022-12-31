@@ -9,13 +9,27 @@ namespace Gork
     /// <summary>
     /// A <see cref="GorkNode"/> that will simply wait for a specified amount of time.
     /// </summary>
-    [GorkNodeInfo("Tools/Coroutine/Wait...", GorkColors.COROUTINE_COLOR, 0)]
-    [GorkNodeInfo("Tools/Coroutine/Wait Realtime...", GorkColors.COROUTINE_COLOR, 1)]
-    [GorkInputPort("Trigger")]
-    [GorkInputPort("Time", typeof(float))]
-    [GorkOutputPort("When Done")]
+    [GorkNodeInfo("Tools/Coroutine/Wait...", GorkColors.COROUTINE_COLOR, 0,
+        WikiName = "Wait",
+        WikiSummary = "Will wait for a specified amount of time in seconds",
+        WikiDescription = "Use the alternative Wait Realtime variant if you want to ignore Time.TimeScale",
+        WikiUsage = "Use this node like how you would use a WaitForSeconds yield instruction in a coroutine"
+        )]
+
+    [GorkNodeInfo("Tools/Coroutine/Wait Realtime...", GorkColors.COROUTINE_COLOR, 1,
+        WikiName = "Wait Realtime",
+        WikiSummary = "Will wait for a specified amount of time in seconds whilst ignoring Time.TimeScale",
+        WikiDescription = "Use the alternative Wait variant if you don't want to ignore Time.TimeScale",
+        WikiUsage = "Use this node like how you would use a WaitForSecondsRealtime yield instruction in a coroutine"
+        )]
+
+    [GorkInputPort("Trigger", WikiDescription = "Will start the timer when triggered")]
+    [GorkInputPort("Time", typeof(float), WikiDescription = "Will override the Time field if connected, otherwise the Time field is used")]
+    [GorkOutputPort("When Done", WikiDescription = "Is triggered when the node is done waiting for the specified amount of time")]
     public class WaitNode : GorkNode
     {
+        [GorkWikiInfo("The amount of time to wait in seconds. Will be overriden by the time input port if something is connected to it",
+            DisplayName = "Time")]
         public float WaitTime = 1;
 
         public override float InspectorLabelWidth => 30;

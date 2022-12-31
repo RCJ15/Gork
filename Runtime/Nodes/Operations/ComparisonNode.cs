@@ -1,28 +1,54 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
-using UnityEngine.UIElements;
-#if UNITY_EDITOR
-using UnityEditor;
-#endif
 
 namespace Gork
 {
     /// <summary>
-    /// Compares it's two input ports with eachother and give out a <see cref="bool"/> if the comparison was true or false.
+    /// Compares it's two input ports with eachother and gives out a <see cref="bool"/> if the comparison was true or false.
     /// </summary>
-    [GorkNodeInfo("Operations/Comparisons/Equals (==)", GorkColors.BOOL_COLOR, -6)]
-    [GorkNodeInfo("Operations/Comparisons/Not Equals (!=)", GorkColors.BOOL_COLOR, -5)]
-    [GorkNodeInfo("Operations/Comparisons/Number Greater Than (>)", GorkColors.FLOAT_COLOR, -4)]
-    [GorkNodeInfo("Operations/Comparisons/Number Smaller Than (<)", GorkColors.FLOAT_COLOR, -3)]
-    [GorkNodeInfo("Operations/Comparisons/Number Greater Equals (>=)", GorkColors.FLOAT_COLOR, -2)]
-    [GorkNodeInfo("Operations/Comparisons/Number Smaller Equals (<=)", GorkColors.FLOAT_COLOR, -1)]
+    [GorkNodeInfo("Operations/Comparisons/Equals (==)", GorkColors.BOOL_COLOR, -6, WikiName = "Equals", 
+        WikiSummary = "Outputs a bool based on if both of it's inputs are equal to eachother",
+        WikiDescription = "Takes in 2 generic objects and compares if they are equal to eachother.\n" +
+        "Use the Not Equals node variant to check for things that are NOT equal to eachother",
+        WikiInputPorts = WikiEqualsInputPorts,
+        WikiUsage = "Use this node to check if 2 values are equal to eachother in GorkGraph")]
+
+    [GorkNodeInfo("Operations/Comparisons/Not Equals (!=)", GorkColors.BOOL_COLOR, -5, WikiName = "Not Equals",
+        WikiSummary = "Outputs a bool based on if it's inputs are NOT equal to eachother",
+        WikiDescription = "Takes in 2 generic objects and compares if they are NOT equal to eachother.\n" +
+        "Use the Equals node variant to check for things that are equal to eachother",
+        WikiInputPorts = WikiEqualsInputPorts,
+        WikiUsage = "Use this node to check if 2 values are NOT equal to eachother in GorkGraph")]
+
+    [GorkNodeInfo("Operations/Comparisons/Number Greater Than (>)", GorkColors.FLOAT_COLOR, -4, WikiName = "Number Greater Than",
+        WikiSummary = "Outputs a bool based on if it's first input is greater than it's second",
+        WikiDescription = "Takes in 2 numbers and compares if the first number is greater than the other",
+        WikiInputPorts = WikiNumbersInputPorts,
+        WikiUsage = "Use this node to check if a number is greater than another")]
+    [GorkNodeInfo("Operations/Comparisons/Number Smaller Than (<)", GorkColors.FLOAT_COLOR, -3, WikiName = "Number Smaller Than",
+        WikiSummary = "Outputs a bool based on if it's first input is smaller than it's second",
+        WikiDescription = "Takes in 2 numbers and compares if the first number is smaller than the other",
+        WikiInputPorts = WikiNumbersInputPorts,
+        WikiUsage = "Use this node to check if a number is smaller than another")]
+    [GorkNodeInfo("Operations/Comparisons/Number Greater Equals (>=)", GorkColors.FLOAT_COLOR, -2, WikiName = "Number Greater Equals",
+        WikiSummary = "Outputs a bool based on if it's first input is greater than or equal to it's second",
+        WikiDescription = "Takes in 2 numbers and compares if the first number is greater than or equal to the other",
+        WikiInputPorts = WikiNumbersInputPorts,
+        WikiUsage = "Use this node to check if a number is greater than or equal to another")]
+    [GorkNodeInfo("Operations/Comparisons/Number Smaller Equals (<=)", GorkColors.FLOAT_COLOR, -1, WikiName = "Number Smaller Equals",
+        WikiSummary = "Outputs a bool based on if it's first input is smaller than or equal to it's second",
+        WikiDescription = "Takes in 2 numbers and compares if the first number is smaller than or equal to the other",
+        WikiInputPorts = WikiNumbersInputPorts,
+        WikiUsage = "Use this node to check if a number is smaller than or equal to another")]
+
     [GorkInputPort("X", typeof(float))]
     [GorkInputPort("Y", typeof(float))]
-    [GorkOutputPort("Result", typeof(bool))]
+    [GorkOutputPort("Result", typeof(bool), WikiDescription = "The result of the comparison")]
     public class ComparisonNode : GorkNode
     {
+        private const string WikiEqualsInputPorts = "<b>X (Object)</b> - The first object that is going to get compared.\n<b>Y (Object)</b> - The second object that is going to get compared";
+        private const string WikiNumbersInputPorts = "<b>X (Float)</b> - The first number that is going to get compared.\n<b>Y (Float)</b> - The second number that is going to get compared";
+
         protected override void BuildInputTypesList(List<Type> list)
         {
             // Equals and Not Equals

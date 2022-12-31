@@ -11,21 +11,58 @@ namespace Gork
     /// <summary>
     /// 
     /// </summary>
-    [GorkNodeInfo("Tools/Events/Internal Event", GorkColors.INTERNAL_EVENT_COLOR, 1)]
+    [GorkNodeInfo("Tools/Events/Internal Event", GorkColors.INTERNAL_EVENT_COLOR, 1, WikiSummary = "Is triggered when it's corresponding event is called outside of the Graph",
+        WikiDescription = "This node will trigger it's connected output when the Internal Event of the same name is called outside of this Graph.\n" +
+        "The way to trigger an internal event is throuhg using the CallExternalEvent() method in a GorkGraphReader",
+        WikiOutputPorts = "<b>Trigger</b> - Is triggered when the Internal Event of the same name is called outside of this Graph",
+        WikiUsage = "Use this node like a way to start connections inside the Graph from the outside of the Graph"
+        )]
+    [GorkNodeInfo("Tools/Events/External Event", GorkColors.EXTERNAL_EVENT_COLOR, 2, WikiSummary = ExtSummaryP1 + ExtSummaryP2,
+        WikiDescription = ExtDescription,
+        WikiInputPorts = ExtInputPorts,
+        WikiUsage = ExtUsage
+        )]
 
-    [GorkNodeInfo("Tools/Events/External Event", GorkColors.EXTERNAL_EVENT_COLOR, 2)]
-    [GorkNodeInfo("Tools/Events/Float External Event", GorkColors.EXTERNAL_EVENT_COLOR, 3)]
-    [GorkNodeInfo("Tools/Events/Int External Event", GorkColors.EXTERNAL_EVENT_COLOR, 4)]
-    [GorkNodeInfo("Tools/Events/Bool External Event", GorkColors.EXTERNAL_EVENT_COLOR, 5)]
-    [GorkNodeInfo("Tools/Events/String External Event", GorkColors.EXTERNAL_EVENT_COLOR, 6)]
-    [GorkNodeInfo("Tools/Events/Generic External Event", GorkColors.EXTERNAL_EVENT_COLOR, 7)]
+    [GorkNodeInfo("Tools/Events/Float External Event", GorkColors.EXTERNAL_EVENT_COLOR, 3, WikiSummary = ExtSummaryP1 + " that takes in a Float parameter" + ExtSummaryP2,
+        WikiDescription = ExtDescription + "\nThis node will also feed the UnityEvent with a Float using another Input Port",
+        WikiInputPorts = ExtInputPorts + "\n<b>Input (Float)</b>" + ExtInputPortsExtra,
+        WikiUsage = ExtUsage + " that could use a Float value"
+        )]
+    [GorkNodeInfo("Tools/Events/Int External Event", GorkColors.EXTERNAL_EVENT_COLOR, 4, WikiSummary = ExtSummaryP1 + " that takes in a Integer parameter" + ExtSummaryP2,
+        WikiDescription = ExtDescription + "\nThis node will also feed the UnityEvent with a Int using another Input Port",
+        WikiInputPorts = ExtInputPorts + "\n<b>Input (Int)</b>" + ExtInputPortsExtra,
+        WikiUsage = ExtUsage + " that could use a Int value"
+        )]
+    [GorkNodeInfo("Tools/Events/Bool External Event", GorkColors.EXTERNAL_EVENT_COLOR, 5, WikiSummary = ExtSummaryP1 + " that takes in a Boolean parameter" + ExtSummaryP2,
+        WikiDescription = ExtDescription + "\nThis node will also feed the UnityEvent with a Bool using another Input Port",
+        WikiInputPorts = ExtInputPorts + "\n<b>Input (Bool)</b>" + ExtInputPortsExtra,
+        WikiUsage = ExtUsage + " that could use a Bool value"
+        )]
+    [GorkNodeInfo("Tools/Events/String External Event", GorkColors.EXTERNAL_EVENT_COLOR, 6, WikiSummary = ExtSummaryP1 + " that takes in a String parameter" + ExtSummaryP2,
+        WikiDescription = ExtDescription + "\nThis node will also feed the UnityEvent with a String using another Input Port",
+        WikiInputPorts = ExtInputPorts + "\n<b>Input (String)</b>" + ExtInputPortsExtra,
+        WikiUsage = ExtUsage + " that could use a String value"
+        )]
+    [GorkNodeInfo("Tools/Events/Generic External Event", GorkColors.EXTERNAL_EVENT_COLOR, 7, WikiSummary = ExtSummaryP1 + " that takes in a Generic parameter" + ExtSummaryP2,
+        WikiDescription = ExtDescription + "\nThis node will also feed the UnityEvent with a Generic value using another Input Port",
+        WikiInputPorts = ExtInputPorts + "\n<b>Input (Object)</b>" + ExtInputPortsExtra,
+        WikiUsage = ExtUsage + " that could use a Generic object value"
+        )]
     [NoInputPorts]
     [NoOutputPorts]
     public class EventNode : GorkNode
     {
+        [GorkWikiInfo("Determines what event this node is connected to.\nIs displayed as a dropdown in the editor")]
         public string EventName = "Event Name";
 
         public bool IsInternal => AttributeID == 0;
+
+        private const string ExtSummaryP1 = "Triggers an event";
+        private const string ExtSummaryP2 = " outside of this graph";
+        private const string ExtDescription = "When called, this node will trigger a UnityEvent on the GorkGraphReader that is currently playing this Graph.";
+        private const string ExtInputPorts = "<b>Trigger</b> - Triggers the event this node has been set to trigger.";
+        private const string ExtInputPortsExtra = " - The value that is going to be given to the event";
+        private const string ExtUsage = "Use this node as a way to call upon other methods outside of this Graph";
 
 #if UNITY_EDITOR
         protected override void BuildInputTypesList(List<Type> list)

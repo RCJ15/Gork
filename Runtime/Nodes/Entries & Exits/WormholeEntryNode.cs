@@ -1,49 +1,129 @@
 using System.Collections.Generic;
+using UnityEngine;
 #if UNITY_EDITOR
 using UnityEditor;
 using UnityEditor.Experimental.GraphView;
-using UnityEngine.UIElements;
 #endif
 
 namespace Gork
 {
     /// <summary>
-    /// A node that will transport it's signal to a <see cref="WormholeExitNode"/> with the same key. Use this to fix spaghetti connections and create reusable "functions" in your graphs
+    /// A node that will transport it's signal to a <see cref="WormholeExitNode"/> with the same tag. Use this to fix spaghetti connections and create reusable "functions" in your graphs
     /// </summary>
-    [GorkNodeInfo("Entries & Exits/Wormhole Entry", GorkColors.WORMHOLE_COLOR, 10)]
-    [GorkInputPort("Signal")]
+    [GorkNodeInfo("Entries & Exits/Wormhole Entry", GorkColors.WORMHOLE_COLOR, 10,
+        WikiSummary = "Will transport it's signal to a Wormhole Exit node with the same tag",
+        WikiDescription = "Will call upon all Womrhole Exit nodes that have the same tag as this nodes tag field.\n" +
+        "The tag field can also be set to \"" + NoTagText + "\" which will make this node activate ALL Wormhole Exit nodes in the entire graph",
+        WikiUsage = "Can be used as a way to fix connections that reach halfway accross the entire graph.\nCan also be used to make reusable nodes that can be called over and over again, like a function in code"
+        )]
+    [GorkInputPort("Signal", WikiDescription = "Will trigger all other Wormhole Exit nodes with the same tag")]
     [NoOutputPorts]
     public class WormholeEntryNode : GorkNode
     {
-        public string Key = "Wormhole Key";
-
-        [UnityEngine.HideInInspector] public WormholeExitNode[] Exits;
+        [GorkWikiInfo("The tag that will determine which Wormhole Exit nodes to call.\nIs displayed like a dropdown in the editor")]
+        public string Tag = "";
 
 #if UNITY_EDITOR
         public override void Initialize(Node node)
         {
-            TextField field = new TextField();
-            field.value = Key;
-            field.RegisterValueChangedCallback(data =>
+            OnExpand();
+        }
+
+        public override void OnCollapse()
+        {
+            NodeView.outputContainer.Remove(IMGUIContainer);
+        }
+
+        public override void OnExpand()
+        {
+            NodeView.outputContainer.Add(IMGUIContainer);
+        }
+
+        private const string NoTagText = "<Ignore Tags>";
+        protected override void OnInspectorGUI()
+        {
+            // Do button
+            if (!EditorGUILayout.DropdownButton(new GUIContent(string.IsNullOrEmpty(Tag) ? NoTagText : Tag), FocusType.Keyboard))
             {
-                Undo.RecordObject(this, $"Modified Property in {name}");
-                Key = data.newValue;
+                // This is when the button is not pressed
+                return;
+            }
+
+            // Button has been pressed
+
+            // Get the name property
+            SerializedProperty prop = serializedObject.FindProperty(nameof(Tag));
+            string propValue = prop.stringValue;
+
+            // Create an empty generic menu which will be our dropdown menu
+            GenericMenu menu = new GenericMenu();
+
+            // Loop through all tags
+            foreach (string tag in Graph.Tags)
+            {
+                bool on = propValue == tag;
+
+                // Add the menu item
+                menu.AddItem(new GUIContent(tag), on, () =>
+                {
+                    // Do nothing if the tag is already set to this value
+                    if (on)
+                    {
+                        return;
+                    }
+
+                    // Set name value and apply the changes
+                    prop.stringValue = tag;
+                    serializedObject.ApplyModifiedProperties();
+                });
+            }
+            // Also add a menu item for no tags at all
+            bool noTagsActive = string.IsNullOrEmpty(prop.stringValue);
+
+            menu.AddItem(new GUIContent(NoTagText), noTagsActive, () =>
+            {
+                // Do nothing if the tag is already set to this value
+                if (noTagsActive)
+                {
+                    return;
+                }
+
+                // Set name value and apply the changes
+                prop.stringValue = "";
+                serializedObject.ApplyModifiedProperties();
             });
 
-            node.outputContainer.Add(field);
+            // Display the menu as a dropdown menu at the correct position
+            Rect rect = EditorGUILayout.GetControlRect();
+            rect.y += 18;
+            menu.DropDown(rect);
         }
 #endif
 
         public override void NodeCall(int port)
         {
-            List<WormholeExitNode> exitNodes = Graph.GetAllNodesOfType<WormholeExitNode>();
+            List<WormholeExitNode> exitNodes;
 
-            foreach (WormholeExitNode exitNode in exitNodes)
+            // Tag is empty, which means that we activate ALL Wormhole Exit nodes in the entire graph
+            if (string.IsNullOrEmpty(Tag))
             {
-                if (exitNode.Key == Key)
-                {
-                    Graph.OnNodeCalled.Invoke(exitNode, 0);
-                }
+                exitNodes = Graph.GetNodesOfType<WormholeExitNode>();
+            }
+            // Otherwise just search for Wormhole Exit nodes with the corresponding tag
+            else
+            {
+                exitNodes = Graph.GetNodesWithTag<WormholeExitNode>(Tag);
+            }
+
+            // No nodes :(
+            if (exitNodes == null)
+            {
+                return;
+            }
+
+            foreach (WormholeExitNode node in exitNodes)
+            {
+                Graph.OnNodeCalled.Invoke(node, 0);
             }
         }
     }

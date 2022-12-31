@@ -3,22 +3,32 @@ using System;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.Experimental.GraphView;
-using UnityEngine.UIElements;
 using UnityEngine;
 #endif
 
 namespace Gork
 {
     /// <summary>
-    /// Will give out a Gork Parameter value to connected nodes via a <see cref="string"/> value for Parameter name.
+    /// Will give out a Gork Parameter value to connected nodes via a <see cref="string"/> dropdown for Parameter name.
     /// </summary>
-    [GorkNodeInfo("Values/Parameter/Float Parameter", GorkColors.FLOAT_COLOR, 0)]
-    [GorkNodeInfo("Values/Parameter/Int Parameter", GorkColors.INT_COLOR, 1)]
-    [GorkNodeInfo("Values/Parameter/Bool Parameter", GorkColors.BOOL_COLOR, 2)]
-    [GorkNodeInfo("Values/Parameter/String Parameter", GorkColors.STRING_COLOR, 3)]
+    [GorkNodeInfo("Values/Parameter/Float Parameter", GorkColors.FLOAT_COLOR, 0, WikiSummary = "Gives out a float parameter value",
+        WikiDescription = WikiDescription,
+        WikiUsage = "Use this node to give float parameters that have been modified outside of GorkGraph")]
+    [GorkNodeInfo("Values/Parameter/Int Parameter", GorkColors.INT_COLOR, 1, WikiSummary = "Gives out a int parameter value",
+        WikiDescription = WikiDescription,
+        WikiUsage = "Use this node to give int parameters that have been modified outside of GorkGraph")]
+    [GorkNodeInfo("Values/Parameter/Bool Parameter", GorkColors.BOOL_COLOR, 2, WikiSummary = "Gives out a bool parameter value",
+        WikiDescription = WikiDescription,
+        WikiUsage = "Use this node to give bool parameters that have been modified outside of GorkGraph")]
+    [GorkNodeInfo("Values/Parameter/String Parameter", GorkColors.STRING_COLOR, 3, WikiSummary = "Gives out a string parameter value",
+        WikiDescription = WikiDescription,
+        WikiUsage = "Use this node to give string parameters that have been modified outside of GorkGraph")]
     [NoInputPorts]
     public class ParameterNode : GorkNode
     {
+        private const string WikiDescription = "Uses a string field to determine what parameter to give out.\nParameters are created in the side panel window in GorkGraph";
+
+        [GorkWikiInfo("The name of the parameter this node outputs.\nIs displayed like a dropdown in the editor")]
         public string ParameterName = "Parameter Name";
 
         protected override void BuildOutputTypesList(List<Type> list)

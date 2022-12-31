@@ -1,5 +1,4 @@
 #if UNITY_EDITOR
-using System.Linq;
 using UnityEditor;
 using UnityEditor.Experimental.GraphView;
 using UnityEngine.UIElements;
@@ -10,11 +9,14 @@ namespace Gork
     /// <summary>
     /// Gives out a constant <see cref="bool"/> value.
     /// </summary>
-    [GorkNodeInfo("Values/Bool Value", GorkColors.BOOL_COLOR, 2)]
+    [GorkNodeInfo("Values/Bool Value", GorkColors.BOOL_COLOR, 2, WikiSummary = "Gives out a constant bool value",
+        WikiDescription = "Boolean values can either be true or false",
+        WikiUsage = "Use this like a boolean field")]
     [NoInputPorts]
     [GorkOutputPort("Value", typeof(bool))]
     public class BoolValueNode : GorkNode
     {
+        [GorkWikiInfo("The bool value of this node.\nIs displayed like a toggle in the editor")]
         public bool Value;
 
 #if UNITY_EDITOR

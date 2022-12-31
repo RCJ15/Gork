@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEditor;
+using System;
 
 namespace Gork.Editor
 {
@@ -334,6 +335,99 @@ namespace Gork.Editor
 
         private static float? _cachedInspectorWidth = null;
         #endregion
+        #endregion
+
+        #region Currently Open Wiki Page
+        private const string _wikiGWPFileGUIDPrefKey = "GorkGraph.Wiki.GWPFileGuid";
+        private const string _wikiNodePageTypePrefKey = "GorkGraph.Wiki.NodePageType";
+        private const string _wikiNodePageIndexPrefKey = "GorkGraph.Wiki.NodePageIndex";
+
+        /// <summary>
+        /// The currently open <see cref="GorkWikiPage"/>.
+        /// </summary>
+        public static GorkWikiPage CurrentlyOpenWikiPage
+        {
+            get
+            {
+                switch (CurrentlyOpenType)
+                {
+                    case WikiType.GWPFile:
+                        string guid = EditorPrefs.GetString(_wikiGWPFileGUIDPrefKey, null);
+                        if (string.IsNullOrEmpty(guid))
+                        {
+                            return null;
+                        }
+
+                        string path = AssetDatabase.GUIDToAssetPath(guid);
+
+                        if (string.IsNullOrEmpty(path))
+                        {
+                            return null;
+                        }
+
+                        return GorkWikiPage.ReadGWPFile(path);
+
+                    case WikiType.NodePage:
+                        Type type = Type.GetType(EditorPrefs.GetString(_wikiNodePageTypePrefKey));
+                        int index = EditorPrefs.GetInt(_wikiNodePageIndexPrefKey);
+                        return GorkWikiPage.ReadNodeAttribute(GorkNodeInfoAttribute.TypeAttributes[type][index]);
+
+                    default:
+                        return null;
+                }
+            }
+        }
+
+        private const string _wikiCurrentlyOpenTypePrefKey = "GorkGraph.Wiki.CurrentlyOpenType";
+
+        private static WikiType CurrentlyOpenType
+        {
+            get
+            {
+                if (!_cachedCurrentlyOpenType.HasValue)
+                {
+                    _cachedCurrentlyOpenType = (WikiType)EditorPrefs.GetInt(_wikiCurrentlyOpenTypePrefKey, 0);
+                }
+                return _cachedCurrentlyOpenType.Value;
+            }
+            set
+            {
+                if (_cachedCurrentlyOpenType.HasValue && _cachedCurrentlyOpenType.Value == value)
+                {
+                    return;
+                }
+
+                _cachedCurrentlyOpenType = value;
+                EditorPrefs.SetInt(_wikiCurrentlyOpenTypePrefKey, (int)value);
+            }
+        }
+
+        private static WikiType? _cachedCurrentlyOpenType = null;
+
+        public static void WikiOpenHomePage()
+        {
+            CurrentlyOpenType = WikiType.HomePage;
+        }
+        public static void WikiOpenGWPFile(string gwpFilePath)
+        {
+            CurrentlyOpenType = WikiType.GWPFile;
+            EditorPrefs.SetString(_wikiGWPFileGUIDPrefKey, AssetDatabase.AssetPathToGUID(gwpFilePath));
+        }
+        public static void WikiOpenNodePage(GorkNodeInfoAttribute attribute)
+        {
+            CurrentlyOpenType = WikiType.NodePage;
+
+            Type type = GorkNodeInfoAttribute.AttributeTypes[attribute];
+            EditorPrefs.SetString(_wikiNodePageTypePrefKey, type.AssemblyQualifiedName);
+            EditorPrefs.SetInt(_wikiNodePageIndexPrefKey, GorkNodeInfoAttribute.TypeAttributes[type].IndexOf(attribute));
+        }
+
+        private enum WikiType
+        {
+            HomePage,
+            GWPFile,
+            NodePage,
+        }
         #endregion
     }
 }

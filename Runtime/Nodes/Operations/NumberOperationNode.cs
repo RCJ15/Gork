@@ -7,10 +7,22 @@ namespace Gork
     /// <summary>
     /// Either Adds, Subtracts, Multiplies or Divides a number with another and outputs the result.
     /// </summary>
-    [GorkNodeInfo("Operations/Add Number", GorkColors.FLOAT_COLOR, 0)]
-    [GorkNodeInfo("Operations/Subtract Number", GorkColors.FLOAT_COLOR, 1)]
-    [GorkNodeInfo("Operations/Multiply Number", GorkColors.FLOAT_COLOR, 2)]
-    [GorkNodeInfo("Operations/Divide Number", GorkColors.FLOAT_COLOR, 3)]
+    [GorkNodeInfo("Operations/Add Number", GorkColors.FLOAT_COLOR, 0, 
+        WikiSummary = "Will add two numbers together and output the result",
+        WikiDescription = "Basic math.\n1 + 1 = 2",
+        WikiUsage = "Use this for plus operations")]
+    [GorkNodeInfo("Operations/Subtract Number", GorkColors.FLOAT_COLOR, 1,
+        WikiSummary = "Will subtract two numbers and output the result",
+        WikiDescription = "Basic math.\n2 - 1 = 1",
+        WikiUsage = "Use this for minus operations")]
+    [GorkNodeInfo("Operations/Multiply Number", GorkColors.FLOAT_COLOR, 2,
+        WikiSummary = "Will multiply two numbers together and output the result",
+        WikiDescription = "Basic math.\n2 * 3 = 6",
+        WikiUsage = "Use this for multiplication operations")]
+    [GorkNodeInfo("Operations/Divide Number", GorkColors.FLOAT_COLOR, 3,
+        WikiSummary = "Will divide two numbers and output the result",
+        WikiDescription = "Basic math.\n6 / 3 = 2",
+        WikiUsage = "Use this for division operations")]
 
     [GorkInputPort("X", typeof(float))]
     [GorkInputPort("Y", typeof(float))]

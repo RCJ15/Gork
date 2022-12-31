@@ -188,7 +188,7 @@ namespace Gork
                 return;
             }
 
-            List<StartNode> startNodes = graph.GetAllNodesOfType<StartNode>();
+            List<StartNode> startNodes = graph.GetNodesOfType<StartNode>();
 
             // There are no start nodes in the Graph so we cannot start!!! :( :( ;3;
             if (startNodes == null)

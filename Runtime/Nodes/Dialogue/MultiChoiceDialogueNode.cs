@@ -15,10 +15,23 @@ namespace Gork
     /// <summary>
     /// A <see cref="GorkNode"/> that will start a multi choice option list.
     /// </summary>
-    [GorkNodeInfo("Dialogue/Multi Choice Dialogue", GorkColors.DIALOGUE_COLOR, 1)]
-    [GorkInputPort("Trigger")]
+    [GorkNodeInfo("Dialogue/Multi Choice Dialogue", GorkColors.DIALOGUE_COLOR, 1, 
+        WikiSummary = "Will start a multi choice dialogue list when activated",
+        WikiDescription = "This node will allow you to create dynamic dialogue through GorkGraph.\n" +
+        "The way that the multi choice dialogue is displayed is dependant on the GorkDialogueProvider and how it handles mutli choice dialogue.\n" +
+        "This node also will dynamically add output ports based on the amount of choices you have.",
+        WikiOutputPorts = "This node has dynamic output ports.\nThis means that the amount of output ports will change based on it's amount of given choices.\n" +
+        "Each output port will be connected to it's choice of the same name.\n\n" +
+        "<b>Example:</b>\n" +
+        "You have added 2 choices to the list: \"Yes\" & \"No\".\n" +
+        "This means that 2 output ports are available: \"Choice 1\" & \"Choice 2\"\n" +
+        "\"Choice 1\" will be triggered if \"Yes\" is the selected answer.\n" +
+        "\"Choice 2\" will be triggered if \"No\" is the selected answer and so on...",
+        WikiUsage = "Use this node to create multiple options that the player can choose in a dialogue")]
+    [GorkInputPort("Trigger", WikiDescription = "Will activate the multi choice dialogue when triggered")]
     public class MultiChoiceDialogueNode : GorkNode
     {
+        [GorkWikiInfo("An array of string that represent the choices that the player will be able to choose from")]
         [TextArea(1, 5)]
         public string[] Choices = new string[] { "Yes", "No" };
 

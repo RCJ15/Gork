@@ -8,13 +8,18 @@ using UnityEditor.Experimental.GraphView;
 namespace Gork
 {
     /// <summary>
-    /// 
+    /// Will stop all <see cref="GorkNode"/> that have a certain tag
     /// </summary>
-    [GorkNodeInfo("Entries & Exits/Disrupt Node", GorkColors.ENTRY_COLOR, 2)]
-    [GorkInputPort("Trigger")]
+    [GorkNodeInfo("Entries & Exits/Disrupt Node", GorkColors.ENTRY_COLOR, 2, 
+        WikiSummary = "Will stop all nodes that have a certain tag",
+        WikiDescription = "Uses a tag and stops all nodes that have that specific tag attached",
+        WikiUsage = "Use this like how you would use a Stop Node, except that you only stop a few hand picked nodes instead of everything all at once"
+        )]
+    [GorkInputPort("Trigger", WikiDescription = "Will stop the tagged nodes when triggered")]
     [NoOutputPorts]
     public class DisruptNode : GorkNode
     {
+        [GorkWikiInfo("The tag that will determine which nodes to stop.\nIs displayed like a dropdown in the editor")]
         public string Tag = "Tag Name";
 
         public override void NodeCall(int port)
@@ -76,7 +81,7 @@ namespace Gork
                 // Add the menu item
                 menu.AddItem(new GUIContent(tag), on, () =>
                 {
-                    // Do nothing if the parameter is already set to this value
+                    // Do nothing if the tag is already set to this value
                     if (on)
                     {
                         return;

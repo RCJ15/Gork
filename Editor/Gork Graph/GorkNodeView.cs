@@ -40,14 +40,13 @@ namespace Gork.Editor
 
         //-- Question Mark Button
         private static VisualTreeAsset _questionMarkButtonVisualTree = null;
+        private VisualElement _questionMarkButton;
+        private bool _questionMarkButtonAdded = true;
 
         private const string QUESTION_MARK_ICON = "iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAEfSURBVEhL3ZU/S0JRHIbvdZaGHBxCaGuSRIKaWhxCHBpbnAra+hoOfg4bJJr7FEFcaDedFZcgaLg995z3lv/i6PEs+sDD673nx3sO3otGO0+s/Jc0TevEGQ5xkBnH8RcZBja4x0Ve8FIj20HRqg1yHjXmDyXX2MUnfMVFuhoNA4UNHJrqP061HAYKb2zvL3daWqKg3Ajeoj4xsVeGY+USXhtw4hpxaK8MidIfSi9kGxPM+cQjjflBwZWpWs2Dxvyh5Nx2zfGGTY1sB0UnptIyxoqWnKz7kKfKjG/eopE+O9lkgw85zm7sFnznRXzGAXZ0OxyU9nCWWy05WfcZFJU5B8owcOKWPbjhHctacuL8y8yhtEqUMOE1nf2h22ui6AeEKjbxXhYw8QAAAABJRU5ErkJggg==";
-
         private static Texture2D _cachedQuestionMarkIcon;
 
         private static readonly Color _buttonSelectedColor = new Color(0.168627f, 0.168627f, 0.168627f);
-
-        //private static readonly PropertyInfo[] _iStylePropeties = typeof(IStyle).GetProperties();
 
         //-- Tag Display
         private VisualElement _tagDisplay;
@@ -98,10 +97,10 @@ namespace Gork.Editor
             #endregion
 
             #region Question Mark Button
-            // Create the question mark button which will open up the documentation popup window for this node type
+            // Create the question mark button which will open up the gork wiki page for this node type
             _questionMarkButtonVisualTree.CloneTree(titleButtonContainer);
-            VisualElement questionMarkButton = titleButtonContainer.Q<VisualElement>("QuestionMarkButton");
-            VisualElement icon = questionMarkButton.Q<VisualElement>("Icon");
+            _questionMarkButton = titleButtonContainer.Q<VisualElement>("QuestionMarkButton");
+            VisualElement icon = _questionMarkButton.Q<VisualElement>("Icon");
 
             // Load the question mark icon image from base64 if it's null
             if (_cachedQuestionMarkIcon == null)
@@ -112,36 +111,41 @@ namespace Gork.Editor
             icon.style.backgroundImage = _cachedQuestionMarkIcon;
             icon.style.opacity = 0.5f;
 
-            // Open up the documentation when the question mark button is pressed
-            questionMarkButton.AddManipulator(new Clickable(() =>
+            // Open up the gork wiki when the question mark button is pressed
+            _questionMarkButton.AddManipulator(new Clickable(() =>
             {
-                Debug.Log("OPEN DOCUMENTATION");
+                if (_attribute == null || !_attribute.HasWiki)
+                {
+                    return;
+                }
+
+                GorkWikiWindow.OpenNodePage(_attribute);
             }));
 
             // Update the question mark button visually when the mouse enters/leaves the button
-            questionMarkButton.RegisterCallback<MouseEnterEvent>(evt =>
+            _questionMarkButton.RegisterCallback<MouseEnterEvent>(evt =>
             {
                 icon.style.backgroundColor = _buttonSelectedColor;
                 icon.style.opacity = 1;
             });
 
-            questionMarkButton.RegisterCallback<MouseLeaveEvent>(evt =>
+            _questionMarkButton.RegisterCallback<MouseLeaveEvent>(evt =>
             {
                 icon.style.backgroundColor = Color.clear;
                 icon.style.opacity = 0.5f;
             });
 
             // Make the question mark button visible only when the mouse is on top of this node
-            questionMarkButton.visible = false;
+            _questionMarkButton.visible = false;
 
             RegisterCallback<MouseEnterEvent>(evt =>
             {
-                questionMarkButton.visible = true;
+                _questionMarkButton.visible = true;
             });
 
             RegisterCallback<MouseLeaveEvent>(evt =>
             {
-                questionMarkButton.visible = false;
+                _questionMarkButton.visible = false;
             });
             #endregion
 
@@ -302,6 +306,21 @@ namespace Gork.Editor
 
             // Set title
             title = _attribute.NodeName;
+
+            // Update the question mark button
+            if (!_questionMarkButtonAdded && _attribute.HasWiki)
+            {
+                titleButtonContainer.Add(_questionMarkButton);
+                _questionMarkButtonAdded = true;
+            }
+            else if (_questionMarkButtonAdded && !_attribute.HasWiki)
+            {
+                titleButtonContainer.Remove(_questionMarkButton);
+                _questionMarkButtonAdded = false;
+            }
+
+            // Also update the tooltip
+            _questionMarkButton.tooltip = _attribute.WikiSummary;
 
             if (!rebuildNode)
             {

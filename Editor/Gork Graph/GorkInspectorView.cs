@@ -245,7 +245,7 @@ namespace Gork.Editor
 
         public GorkInspectorView()
         {
-            mode = (ModeEnum)GorkEditorSaveData.CurrentInspectorMode;
+            _mode = (ModeEnum)GorkEditorSaveData.CurrentInspectorMode;
 
             RegisterCallback<MouseUpEvent>(HandleRightClick);
         }

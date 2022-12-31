@@ -1,5 +1,5 @@
 # IMPORTANT NOTE
-This project is currently unfinished. Development will be finished before 2023 is all that I can promise.
+This project is currently unfinished.
 
 # How To Install
 1. Download the repository.
@@ -13,7 +13,7 @@ Gork uses Scriptable Objects to save it's graphs. In order to get started, right
 The interface is quite simple. You have a toolbar at the top for a few operations you can do, such as highlighting the file in your projects folder and saving your graph to another file.
 
 Navigating is also quite simple. If you have used the Animator window or Shader Graph, you'll feel right at home!
-Simply hold alt + LMB and move the mouse to navigate, use the scrollwheel to zoom in and out. Hold shift to select nodes in a box.
+Simply hold alt + LMB and move the mouse to navigate, use the scrollwheel to zoom in and out. Click and drag to select nodes in a box.
 
 ## Nodes
 Gork graph uses nodes and is the meat of gork.

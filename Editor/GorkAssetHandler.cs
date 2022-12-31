@@ -1,8 +1,4 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
-
-using UnityEngine;
 using Object = UnityEngine.Object;
 using UnityEditor;
 using UnityEditor.Callbacks;
@@ -13,13 +9,23 @@ namespace Gork.Editor
     /// <summary>
     /// Special editor script for Gork that handles the opening and deleting of a <see cref="GorkGraph"/>.
     /// </summary>
-    public class AssetHandler : AssetModificationProcessor
+    public class GorkAssetHandler : AssetModificationProcessor
     {
         [OnOpenAsset]
         public static bool OnOpenAsset(int instanceID, int line)
         {
             // Load object using instance ID
             string path = AssetDatabase.GetAssetPath(instanceID);
+
+            // Check if the path is a GWP file
+            if (path.ToLower().EndsWith(".gwp"))
+            {
+                // If it is, then open the file up in the Gork Wiki
+                GorkWikiWindow.OpenGWPFile(path);
+                return true;
+            }
+            
+            // If the file is not a GWP file, then we check if the file is a gork graph file
             Object obj = AssetDatabase.LoadMainAssetAtPath(path);
 
             // Get the object type
@@ -31,7 +37,6 @@ namespace Gork.Editor
                 // Is not gork graph
                 return false;
             }
-
             // It is gork graph!!
 
             // Open the gork graph in the Gork Graph Editor

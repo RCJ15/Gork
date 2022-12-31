@@ -8,13 +8,16 @@ using UnityEngine.UIElements;
 namespace Gork
 {
     /// <summary>
-    /// Gives a constant <see cref="int"/> value.
+    /// Gives out a constant <see cref="int"/> value.
     /// </summary>
-    [GorkNodeInfo("Values/Int Value", GorkColors.INT_COLOR, 1)]
+    [GorkNodeInfo("Values/Int Value", GorkColors.INT_COLOR, 1, WikiSummary = "Gives out a constant float value",
+        WikiDescription = "Integer values maximum positive value is 2,147,483,647\n<i>(two billion, one hundred fourty seven million, four hundred eighty three thousand, six hundred fourty seven)</b>",
+        WikiUsage = "Use this like a int field")]
     [NoInputPorts]
     [GorkOutputPort("Value", typeof(int))]
     public class IntValueNode : GorkNode
     {
+        [GorkWikiInfo("The int value of this node")]
         public int Value;
 
 #if UNITY_EDITOR

@@ -112,7 +112,7 @@ namespace Gork.Editor
                 Type nodeType = GorkNodeInfoAttribute.AttributeTypes[attribute];
                 int attributeID = GorkNodeInfoAttribute.TypeAttributes[nodeType].IndexOf(attribute);
 
-                GUIContent content = new GUIContent(attribute.NodeName);
+                GUIContent content = new GUIContent(attribute.NodeName, attribute.WikiSummary);
 
                 Color? nullableColor = attribute.GetColor();
 

@@ -1,10 +1,11 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="True">
     <ui:VisualElement name="Parent" style="flex-grow: 1;">
         <uie:Toolbar style="border-bottom-width: 2px; overflow: hidden; border-bottom-color: rgb(35, 35, 35); height: 23px;">
-            <uie:ToolbarButton text="Highlight Current Graph" display-tooltip-when-elided="true" focusable="false" name="HighlightGraph" style="overflow: hidden; -unity-text-align: middle-center;" />
+            <uie:ToolbarButton text="Highlight Current Graph" display-tooltip-when-elided="true" focusable="false" name="HighlightGraph" style="overflow: hidden; -unity-text-align: middle-center; border-left-width: 0; left: 0;" />
             <uie:ToolbarButton text="Save Copy..." display-tooltip-when-elided="true" focusable="false" name="SaveCopy" style="left: 10px; overflow: hidden; -unity-text-align: middle-center;" />
             <uie:ToolbarButton text="Open Graph" display-tooltip-when-elided="true" focusable="false" name="OpenGraph" style="left: 20px; overflow: hidden; -unity-text-align: middle-center;" />
-            <uie:ToolbarButton text="Minimap" display-tooltip-when-elided="true" focusable="false" name="ToggleMinimap" style="-unity-text-align: middle-left; right: 0; position: absolute; left: initial; top: 0; bottom: 0; overflow: hidden; width: 80px;">
+            <uie:ToolbarButton text="Open Wiki" display-tooltip-when-elided="true" focusable="false" name="OpenWiki" style="left: initial; overflow: hidden; -unity-text-align: middle-center; top: 0; right: 90px; bottom: 0; position: absolute;" />
+            <uie:ToolbarButton text="Minimap" display-tooltip-when-elided="true" focusable="false" name="ToggleMinimap" style="-unity-text-align: middle-left; right: 0; position: absolute; left: initial; top: 0; bottom: 0; overflow: hidden; width: 80px; border-right-width: 0;">
                 <ui:VisualElement name="Image" style="left: 58px; position: absolute; top: 2px; right: 0; bottom: 0; height: 18px; width: 18px;" />
                 <ui:VisualElement name="Highlight" style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; background-color: rgba(255, 255, 255, 0.15);" />
             </uie:ToolbarButton>

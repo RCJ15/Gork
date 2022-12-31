@@ -37,7 +37,7 @@ namespace Gork.Editor
 
                 if (string.IsNullOrEmpty(_path))
                 {
-                    throw new Exception("The file GorkGraphEditor.cs has been renamed.");
+                    throw new Exception("The script GorkGraphEditor.cs is missing!");
                 }
 
                 return _path;
@@ -189,6 +189,13 @@ namespace Gork.Editor
             root.Q<ToolbarButton>("OpenGraph").clicked += () =>
             {
                 OpenExisting();
+            };
+
+            // Open Wiki
+            root.Q<ToolbarButton>("OpenWiki").clicked += () =>
+            {
+                // Open the gork wiki
+                GorkWikiWindow.Open();
             };
 
             #region Eyeball Icon for Minimap Toggle

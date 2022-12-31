@@ -8,13 +8,16 @@ using UnityEditor.Experimental.GraphView;
 namespace Gork
 {
     /// <summary>
-    /// Gives a constant <see cref="string"/> value.
+    /// Gives out a constant <see cref="string"/> value.
     /// </summary>
-    [GorkNodeInfo("Values/String Value", GorkColors.STRING_COLOR, 3)]
+    [GorkNodeInfo("Values/String Value", GorkColors.STRING_COLOR, 3, WikiSummary = "Gives out a constant string value",
+        WikiDescription = "String values are actually just an array of <i>\"char\"</i> variables",
+        WikiUsage = "Use this like a string field")]
     [NoInputPorts]
     [GorkOutputPort("Value", typeof(string))]
     public class StringValueNode : GorkNode
     {
+        [GorkWikiInfo("The string value of this node")]
         [TextArea(0,5)] public string Value = "Text";
 
 #if UNITY_EDITOR
