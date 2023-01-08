@@ -164,10 +164,16 @@ namespace Gork.Editor
                 return;
             }
 
+            bool startWordWrap = EditorStyles.label.wordWrap;
+            bool startRichText = EditorStyles.label.richText;
+
             EditorStyles.label.wordWrap = true;
             EditorStyles.label.richText = true;
 
             _currentPage.OnInspectorGUI.Invoke(_currentPage, _imguiContainer, this);
+
+            EditorStyles.label.wordWrap = startWordWrap;
+            EditorStyles.label.richText = startRichText;
         }
     }
 }

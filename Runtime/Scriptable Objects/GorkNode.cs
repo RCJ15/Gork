@@ -424,6 +424,14 @@ namespace Gork
         #endregion
 
         /// <summary>
+        /// Is called when this node is suddenly stopped by something.
+        /// </summary>
+        public virtual void OnStopped()
+        {
+
+        }
+
+        /// <summary>
         /// Calls a <see cref="GorkNode"/> that is connected to an output port with the given <paramref name="port"/> index.
         /// </summary>
         public virtual void CallPort(int port)

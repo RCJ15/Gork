@@ -240,6 +240,9 @@ namespace Gork
             foreach (var pair in activeCoroutines)
             {
                 StopCoroutine(pair.Value);
+
+                // Call OnStopped in the node
+                pair.Key.OnStopped();
             }
 
             activeCoroutines.Clear();

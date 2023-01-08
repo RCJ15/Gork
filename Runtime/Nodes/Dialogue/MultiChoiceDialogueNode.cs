@@ -4,10 +4,8 @@ using UnityEngine;
 using System;
 
 #if UNITY_EDITOR
-using UnityEngine.UIElements;
 using UnityEditor;
 using UnityEditorInternal;
-using UnityEditor.Experimental.GraphView;
 #endif
 
 namespace Gork
@@ -35,6 +33,9 @@ namespace Gork
         [TextArea(1, 5)]
         public string[] Choices = new string[] { "Yes", "No" };
 
+        private bool _awaitingDialogue = false;
+        private DialogueLineChoice _lineChoice;
+
         protected override void BuildOutputTypesList(List<Type> list)
         {
             int choicesLength = Choices.Length;
@@ -43,6 +44,42 @@ namespace Gork
             {
                 list.Add(null);
             }
+        }
+
+        public override IEnumerator NodeIEnumerator(int port)
+        {
+            _lineChoice = GorkDialogueProvider.AppendChoiceDialogue(Choices, SelectedChoice);
+
+            _awaitingDialogue = true;
+
+            yield return new WaitUntil(() => !_awaitingDialogue);
+        }
+
+
+        private void SelectedChoice(int choice)
+        {
+            _awaitingDialogue = false;
+
+            _lineChoice = null;
+
+            if (!HasOutputConnection(choice))
+            {
+                return;
+            }
+
+            CallPort(choice);
+        }
+
+        public override void OnStopped()
+        {
+            _awaitingDialogue = false;
+
+            if (_lineChoice != null)
+            {
+                _lineChoice.OnFinish -= SelectedChoice;
+            }
+
+            _lineChoice = null;
         }
 
 #if UNITY_EDITOR

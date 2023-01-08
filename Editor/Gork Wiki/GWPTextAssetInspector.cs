@@ -30,6 +30,9 @@ namespace Gork.Editor
         {
             GorkWikiPage page = GorkWikiPage.ReadGWPFile(path);
 
+            bool startWordWrap = EditorStyles.label.wordWrap;
+            bool startRichText = EditorStyles.label.richText;
+
             // Setup Text
             EditorStyles.label.wordWrap = true;
 
@@ -62,6 +65,9 @@ namespace Gork.Editor
             EditorStyles.label.fontStyle = FontStyle.Normal;
 
             EditorGUILayout.LabelField(page.MainText);
+
+            EditorStyles.label.wordWrap = startWordWrap;
+            EditorStyles.label.richText = startRichText;
         }
     }
 }
