@@ -1,7 +1,7 @@
-#if UNITY_EDITOR
 using System.Collections;
-using UnityEditor;
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
 #endif
 
 namespace Gork
@@ -32,10 +32,10 @@ namespace Gork
             DisplayName = "Time")]
         public float WaitTime = 1;
 
+#if UNITY_EDITOR
         public override float InspectorLabelWidth => 30;
         public override float InspectorFieldWidth => 70;
 
-#if UNITY_EDITOR
         public override void OnViewEnable()
         {
             UpdateTitle();

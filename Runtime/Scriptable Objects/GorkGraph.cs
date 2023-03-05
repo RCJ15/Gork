@@ -14,9 +14,9 @@ namespace Gork
     /// The main data container for Gork. A <see cref="ScriptableObject"/> which contains many <see cref="GorkNode"/>s.
     /// </summary>
     [CreateAssetMenu(fileName = "New Gork Graph", menuName = "Gork Graph", order = 150)]
-    public class GorkGraph : ScriptableObject,
+    public class GorkGraph : ScriptableObject
 #if UNITY_EDITOR
-        ISerializationCallbackReceiver
+        , ISerializationCallbackReceiver
 #endif
     {
         public static readonly Type SignalType = typeof(SignalClass);

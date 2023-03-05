@@ -17,10 +17,10 @@ namespace Gork
     /// </summary>
     public class GorkNode : ScriptableObject
     {
+        [DontSaveInGorkGraph] [HideInInspector] public int AttributeID = 0;
 #if UNITY_EDITOR
         [DontSaveInGorkGraph] [HideInInspector] public string GUID;
         [DontSaveInGorkGraph] [HideInInspector] public Vector2 Position; // The position in the graph
-        [DontSaveInGorkGraph] [HideInInspector] public int AttributeID = 0;
         [HideInInspector] public bool Expanded = true;
 
         private string _title;
@@ -371,6 +371,7 @@ namespace Gork
 
                 return _graph;
             }
+            set => _graph = value;
         }
         #endregion
 

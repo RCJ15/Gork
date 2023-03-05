@@ -1,5 +1,10 @@
 using System.Collections;
 using UnityEngine;
+#if UNITY_EDITOR
+using System.Linq;
+using UnityEditor;
+using UnityEditor.Experimental.GraphView;
+#endif
 
 namespace Gork
 {
@@ -14,11 +19,12 @@ namespace Gork
         WikiUsage = "Use this node to start dialogue or chain multiple lines together"
         )]
     [GorkInputPort("Trigger", WikiDescription = "Will activate the dialogue when triggered")]
+    [GorkInputPort("Input", typeof(string), WikiDescription = "Use instead of text field on the node for custom feeding of dialogue text")]
     [GorkOutputPort("When Done", WikiDescription = "Is triggered when the dialogue is finished")]
     public class DialogueNode : GorkNode
     {
         [GorkWikiInfo("The text that will be displayed in the GorkDialogueProvider.")]
-        [TextArea(2, 5)]
+        [TextArea(4, 10)]
         public string Text = "Insert dialogue text here...";
 
         private bool _awaitingDialogue = false;
@@ -28,7 +34,7 @@ namespace Gork
         {
             bool nextLineIsChoiceLine = HasOutputConnection(0) && OutputConnections[0].Connections[0].Node is MultiChoiceDialogueNode;
 
-            _lineText = GorkDialogueProvider.AppendTextDialogue(Text, DoneDialogue, nextLineIsChoiceLine);
+            _lineText = GorkDialogueProvider.AppendTextDialogue(HasInputConnection(1) ? GetValueFromPort<string>(1) : Text, DoneDialogue, nextLineIsChoiceLine);
 
             _awaitingDialogue = true;
 
@@ -55,5 +61,21 @@ namespace Gork
 
             _lineText = null;
         }
+
+#if UNITY_EDITOR
+        public override float InspectorFieldWidth => 70;
+
+        protected override void OnInspectorGUI()
+        {
+            SetupInspector();
+
+            if (HasInputConnection(1))
+            {
+                return;
+            }
+
+            DoDefaultInspector();
+        }
+#endif
     }
 }

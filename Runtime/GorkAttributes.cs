@@ -286,7 +286,7 @@ namespace Gork
     /// <summary>
     /// Modifies the <see cref="Color"/> of a Gork Port. This is purely visual and won't affact anything else other than the color.
     /// </summary>
-    [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
+    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, AllowMultiple = false, Inherited = false)]
     public class GorkPortColorAttribute : Attribute
     {
         private float _r, _g, _b;

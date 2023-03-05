@@ -310,7 +310,8 @@ namespace Gork.Editor
 
             _inspectorView.Initialize(root);
             _inspectorView.GraphView = _graphView;
-
+            _graphView.OnOpenGraph += _inspectorView.OnOpenGraph;
+            
             // Currently editing text
             _currentlyEditingText = root.Q<Label>("CurrentlyEditingText");
             _currentlyEditingDefaultText = _currentlyEditingText.text;

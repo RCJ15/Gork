@@ -21,8 +21,10 @@ namespace Gork
         [TextArea(1, 5)]
         public string LogText = "Hello Gorld!";
 
+#if UNITY_EDITOR
         public override float InspectorLabelWidth => 30;
         public override float InspectorFieldWidth => 50;
+#endif
 
         public override void NodeCall(int port)
         {

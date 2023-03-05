@@ -279,7 +279,7 @@ namespace Gork
         /// </summary>
         protected virtual void OnGraphStop()
         {
-            Debug.Log("Graph stopped!");
+
         }
 
         protected virtual IEnumerator NodeCoroutine(GorkNode node, int port)

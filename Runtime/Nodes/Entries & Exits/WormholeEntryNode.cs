@@ -23,6 +23,8 @@ namespace Gork
         [GorkWikiInfo("The tag that will determine which Wormhole Exit nodes to call.\nIs displayed like a dropdown in the editor")]
         public string Tag = "";
 
+        private const string NoTagText = "<Ignore Tags>";
+
 #if UNITY_EDITOR
         public override void Initialize(Node node)
         {
@@ -39,7 +41,6 @@ namespace Gork
             NodeView.outputContainer.Add(IMGUIContainer);
         }
 
-        private const string NoTagText = "<Ignore Tags>";
         protected override void OnInspectorGUI()
         {
             // Do button

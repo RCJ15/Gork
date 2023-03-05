@@ -13,7 +13,8 @@ using Object = UnityEngine.Object;
 namespace Gork.Editor
 {
     /// <summary>
-    /// 
+    /// The graph view of Gork Graph. <para/>
+    /// Will display all of the nodes, edges and groups in the <see cref="GorkGraphEditor"/> window.
     /// </summary>
     public class GorkGraphView : GraphView
     {
@@ -35,6 +36,8 @@ namespace Gork.Editor
         public Dictionary<GorkGraph.GroupData, GorkGroup> GorkGroups = new Dictionary<GorkGraph.GroupData, GorkGroup>();
 
         protected override bool canDeleteSelection => false;
+
+        public Action<GorkGraph> OnOpenGraph;
 
         public GorkGraphView()
         {
@@ -108,7 +111,7 @@ namespace Gork.Editor
 
             GorkEditorSaveData.DisplayMinimap = _miniMap.visible;
         }
-
+        
         private void OnMouseMoveEvent(MouseMoveEvent evt)
         {
             //_cachedMousePos = GUIUtility.GUIToScreenPoint(Event.current.mousePosition);
@@ -257,6 +260,8 @@ namespace Gork.Editor
         /// </summary>
         public void OpenGraph(GorkGraph graph, bool frameAll = false)
         {
+            OnOpenGraph?.Invoke(graph);
+
             // Set the graph variable
             Graph = graph;
 
@@ -270,6 +275,9 @@ namespace Gork.Editor
             // Create all nodes in the GraphView by looping through all of the nodes in the graph
             Graph.Nodes.ForEach(node =>
             {
+                // Set graph value
+                node.Graph = Graph;
+
                 // Create the node view
                 GorkNodeView nodeView = CreateNodeView(node, node.AttributeID);
             });

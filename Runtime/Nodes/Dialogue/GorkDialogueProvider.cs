@@ -244,6 +244,8 @@ namespace Gork
             }
 
             yield return FinishDialogue();
+
+            currentDialogueCoroutine = null;
         }
 
         /// <summary>

@@ -1,9 +1,8 @@
-using System.Linq;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
+using UnityEngine;
 #if UNITY_EDITOR
 using UnityEditor;
-using UnityEngine;
 #endif
 
 namespace Gork

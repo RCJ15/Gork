@@ -17,7 +17,7 @@ namespace Gork.Editor
         private const string DROPDOWN_ARROW_BASE64 = "iVBORw0KGgoAAAANSUhEUgAAAAkAAAAJCAYAAADgkQYQAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAABMSURBVChTY/z//z8DIcB45MgRgqqYgLgOwsQJ6hhBJNC0WiDVBGKjgTobG5tmsCIQwKIQrADKRgCQQpAboRpwA2wKiAoCkO8IAAYGADYvH/HWQhuAAAAAAElFTkSuQmCC";
         private static Texture2D _dropdownTexture = null;
 
-        private static GenericMenu _createParameterMenu, _createEventMenu = null;
+        private GenericMenu _createParameterMenu, _createEventMenu = null;
 
         private ModeEnum _mode;
         private ModeEnum mode
@@ -248,6 +248,19 @@ namespace Gork.Editor
             _mode = (ModeEnum)GorkEditorSaveData.CurrentInspectorMode;
 
             RegisterCallback<MouseUpEvent>(HandleRightClick);
+
+            RegisterCallback<FocusInEvent>(OnFocusIn);
+            RegisterCallback<FocusOutEvent>(OnFocusOut);
+        }
+
+        public void OnOpenGraph(GorkGraph graph)
+        {
+            _createParameterMenu = null;
+            _createEventMenu = null;
+
+            _cachedParametersList = null;
+            _cachedTagsList = null;
+            _cachedEventsList = null;
         }
 
         private void HandleRightClick(MouseUpEvent evt)
@@ -586,6 +599,26 @@ namespace Gork.Editor
                         break;
                 }
             };
+        }
+
+        private void OnFocusIn(FocusInEvent e)
+        {
+            if (GraphView == null)
+            {
+                return;
+            }
+
+            GraphView.isReframable = false;
+        }
+
+        private void OnFocusOut(FocusOutEvent e)
+        {
+            if (GraphView == null)
+            {
+                return;
+            }
+
+            GraphView.isReframable = true;
         }
 
         public void OnUndoRedo()
