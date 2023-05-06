@@ -351,8 +351,15 @@ namespace Gork
                 // Build the tag if we are inside of the tag
                 if (inTag)
                 {
-                    _tagBuilder.Append(c);
-                    continue;
+                    if (c == '<')
+                    {
+                        inTag = false;
+                    }
+                    else
+                    {
+                        _tagBuilder.Append(c);
+                        continue;
+                    }
                 }
 
                 // Display the letter
@@ -379,13 +386,15 @@ namespace Gork
             if (!line.NextLineIsChoiceLine && (lines.Count <= 1 || lines[1] is not DialogueLineChoice))
             {
                 // Finished with the text line so call the done text line method
-                IEnumerator enumerator = DoneTextLine(line, _currentTags);
+                IEnumerator enumerator = DoneTextLine(line, _currentTags, out Action action);
 
                 // Only wait if it's not null
                 if (enumerator != null)
                 {
                     yield return enumerator;
                 }
+
+                action?.Invoke();
             }
 
             line.FinishLine(null);
@@ -430,8 +439,10 @@ namespace Gork
         /// This means that you can wait before the line ends, which is why this method should be used for awaiting the players input before proceeding to the next line. <para/>
         /// By default this method waits until <see cref="Input.anyKeyDown"/> is true, in which the lines will proceed.
         /// </summary>
-        protected virtual IEnumerator DoneTextLine(DialogueLineText line, List<string> tags)
+        protected virtual IEnumerator DoneTextLine(DialogueLineText line, List<string> tags, out Action onFinish)
         {
+            onFinish = null;
+
             // By default just await any key being pressed
             return new WaitUntil(() => Input.anyKeyDown);
         }

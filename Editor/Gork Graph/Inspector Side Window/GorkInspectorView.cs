@@ -14,9 +14,6 @@ namespace Gork.Editor
     /// </summary>
     public class GorkInspectorView : VisualElement
     {
-        private const string DROPDOWN_ARROW_BASE64 = "iVBORw0KGgoAAAANSUhEUgAAAAkAAAAJCAYAAADgkQYQAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAABMSURBVChTY/z//z8DIcB45MgRgqqYgLgOwsQJ6hhBJNC0WiDVBGKjgTobG5tmsCIQwKIQrADKRgCQQpAboRpwA2wKiAoCkO8IAAYGADYvH/HWQhuAAAAAAElFTkSuQmCC";
-        private static Texture2D _dropdownTexture = null;
-
         private GenericMenu _createParameterMenu, _createEventMenu = null;
 
         private ModeEnum _mode;
@@ -250,7 +247,7 @@ namespace Gork.Editor
             RegisterCallback<MouseUpEvent>(HandleRightClick);
 
             RegisterCallback<FocusInEvent>(OnFocusIn);
-            RegisterCallback<FocusOutEvent>(OnFocusOut);
+            //RegisterCallback<FocusOutEvent>(OnFocusOut);
         }
 
         public void OnOpenGraph(GorkGraph graph)
@@ -418,17 +415,6 @@ namespace Gork.Editor
             };
 
             ToolbarButton addButton = root.Q<ToolbarButton>("AddButton");
-
-            #region Dropdown Arrow
-            // Cache and load the texture if it's not been loaded yet
-            if (_dropdownTexture == null)
-            {
-                // Load texture from base 64
-                _dropdownTexture = GorkEditorUtility.Texture2DFromBase64(DROPDOWN_ARROW_BASE64);
-            }
-
-            addButton.Q<VisualElement>("Image").style.backgroundImage = _dropdownTexture;
-            #endregion
 
             addButton.clicked += () =>
             {
@@ -608,17 +594,8 @@ namespace Gork.Editor
                 return;
             }
 
+            GraphView.Blur();
             GraphView.isReframable = false;
-        }
-
-        private void OnFocusOut(FocusOutEvent e)
-        {
-            if (GraphView == null)
-            {
-                return;
-            }
-
-            GraphView.isReframable = true;
         }
 
         public void OnUndoRedo()

@@ -117,7 +117,7 @@ namespace Gork
             graph.OnNodeCalled += StartNode;
             graph.OnGraphStop += StopGraph;
             graph.OnNodeStop += StopNode;
-            graph.OnCallExternal += CallExternalEvent;
+            graph.OnTriggerExternal += OnTriggerExternalEvent;
 
             _subscribed = true;
         }
@@ -142,7 +142,7 @@ namespace Gork
             graph.OnNodeCalled -= StartNode;
             graph.OnGraphStop -= StopGraph;
             graph.OnNodeStop -= StopNode;
-            graph.OnCallExternal -= CallExternalEvent;
+            graph.OnTriggerExternal -= OnTriggerExternalEvent;
 
             _subscribed = false;
         }
@@ -250,7 +250,7 @@ namespace Gork
             coroutineCount = 0;
         }
 
-        protected virtual void CallExternalEvent(string eventName, object parameter)
+        protected virtual void OnTriggerExternalEvent(string eventName, object parameter)
         {
             if (!EventsDictionary.TryGetValue(eventName, out List<Event> list))
             {
@@ -291,9 +291,12 @@ namespace Gork
             coroutineCount--;
         }
 
-        public void TriggerInternalEvent(string eventName)
+        /// <summary>
+        /// Triggers all internal <see cref="EventNode"/> inside of this GorkGraph with the given <paramref name="eventName"/>.
+        /// </summary>
+        public virtual void TriggerInternalEvent(string eventName)
         {
-            graph.TriggerInternalEvent(eventName);
+            Graph.TriggerInternalEvent(eventName);
         }
 
         #region Parameters

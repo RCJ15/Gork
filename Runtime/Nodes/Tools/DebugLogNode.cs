@@ -44,10 +44,12 @@ namespace Gork
 #if UNITY_EDITOR
         protected override void OnInspectorGUI()
         {
-            using (new EditorGUI.DisabledScope(HasInputConnection(1)))
+            if (HasInputConnection(1))
             {
-                base.OnInspectorGUI();
+                return;
             }
+
+            base.OnInspectorGUI();
         }
 #endif
     }

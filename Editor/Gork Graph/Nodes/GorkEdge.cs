@@ -1,10 +1,7 @@
-using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
-using UnityEditor;
-using UnityEngine.UIElements;
 using UnityEditor.Experimental.GraphView;
 using System;
+using System.Reflection;
 
 namespace Gork.Editor
 {
@@ -13,6 +10,8 @@ namespace Gork.Editor
     /// </summary>
     public class GorkEdge : Edge
     {
+        private static readonly MethodInfo _updateColorsMethod = typeof(Edge).GetMethod("UpdateEdgeControlColorsAndWidth", BindingFlags.Instance | BindingFlags.InvokeMethod | BindingFlags.NonPublic);
+
         public GorkGraphView GraphView;
 
         /*
@@ -29,8 +28,13 @@ namespace Gork.Editor
         }
         */
 
-        public void Delete()
+        public static void UpdateColors(Edge edge)
         {
+            _updateColorsMethod.Invoke(edge, null);
+        }
+
+        public void Delete()
+        {   
             GraphViewChange change = new GraphViewChange();
             change.elementsToRemove = new List<GraphElement>();
 

@@ -1,0 +1,5 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <ui:VisualElement name="QuestionMarkButton" style="width: 32px; justify-content: center; align-items: center;">
+        <ui:VisualElement name="Icon" style="width: 12px; height: 12px; border-top-left-radius: 1px; border-bottom-left-radius: 1px; border-top-right-radius: 1px; border-bottom-right-radius: 1px; background-image: resource(&apos;Gork Textures/gork_question_mark&apos;);" />
+    </ui:VisualElement>
+</ui:UXML>

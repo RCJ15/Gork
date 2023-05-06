@@ -43,9 +43,6 @@ namespace Gork.Editor
         private VisualElement _questionMarkButton;
         private bool _questionMarkButtonAdded = true;
 
-        private const string QUESTION_MARK_ICON = "iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAEfSURBVEhL3ZU/S0JRHIbvdZaGHBxCaGuSRIKaWhxCHBpbnAra+hoOfg4bJJr7FEFcaDedFZcgaLg995z3lv/i6PEs+sDD673nx3sO3otGO0+s/Jc0TevEGQ5xkBnH8RcZBja4x0Ve8FIj20HRqg1yHjXmDyXX2MUnfMVFuhoNA4UNHJrqP061HAYKb2zvL3daWqKg3Ajeoj4xsVeGY+USXhtw4hpxaK8MidIfSi9kGxPM+cQjjflBwZWpWs2Dxvyh5Nx2zfGGTY1sB0UnptIyxoqWnKz7kKfKjG/eopE+O9lkgw85zm7sFnznRXzGAXZ0OxyU9nCWWy05WfcZFJU5B8owcOKWPbjhHctacuL8y8yhtEqUMOE1nf2h22ui6AeEKjbxXhYw8QAAAABJRU5ErkJggg==";
-        private static Texture2D _cachedQuestionMarkIcon;
-
         private static readonly Color _buttonSelectedColor = new Color(0.168627f, 0.168627f, 0.168627f);
 
         //-- Tag Display
@@ -102,13 +99,6 @@ namespace Gork.Editor
             _questionMarkButton = titleButtonContainer.Q<VisualElement>("QuestionMarkButton");
             VisualElement icon = _questionMarkButton.Q<VisualElement>("Icon");
 
-            // Load the question mark icon image from base64 if it's null
-            if (_cachedQuestionMarkIcon == null)
-            {
-                _cachedQuestionMarkIcon = GorkEditorUtility.Texture2DFromBase64(QUESTION_MARK_ICON);
-            }
-
-            icon.style.backgroundImage = _cachedQuestionMarkIcon;
             icon.style.opacity = 0.5f;
 
             // Open up the gork wiki when the question mark button is pressed
@@ -647,14 +637,15 @@ namespace Gork.Editor
                     }
                 }
 
-                // Update names of all ports
+                // Update the types, names and color of all ports
                 int listCount = list.Count;
                 for (int i = 0; i < listCount; i++)
                 {
                     var portInfo = portInfos[i];
                     GorkPort port = list[i];
 
-                    port.portType = portInfo.Type;
+                    // Default the type to the signal type if it's null
+                    port.portType = portInfo.Type == null ? GorkGraph.SignalType : portInfo.Type;
                     port.portName = portInfo.Name;
 
                     port.UpdateColor();
@@ -769,7 +760,7 @@ namespace Gork.Editor
             hashSet.UnionWith(GetConnections(container));
         }
 
-        private List<Edge> GetConnections(VisualElement container)
+        public List<Edge> GetConnections(VisualElement container)
         {
             List<Edge> list = new List<Edge>();
 
@@ -983,6 +974,11 @@ namespace Gork.Editor
 
                     // Ignore if the field has the DontSaveInGorkGraphAttribute
                     if (field.GetCustomAttribute<DontSaveInGorkGraphAttribute>() != null)
+                    {
+                        return;
+                    }
+
+                    if (_gorkFields[gorkType].ContainsKey(field.Name))
                     {
                         return;
                     }

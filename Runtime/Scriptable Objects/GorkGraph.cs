@@ -226,9 +226,17 @@ namespace Gork
             Undo.RecordObject(child, $"Added connection to \"{child.name}\"");
             Undo.RecordObject(parent, $"Added connection to \"{parent.name}\"");
 #endif
+            // Create 2 new GorkNode.Connection variables which will represent the new connections
+            GorkNode.Connection parentConnection = new GorkNode.Connection(childPort, child);
+            GorkNode.Connection childConnection = new GorkNode.Connection(parentPort, parent);
+
             // Add the connection to the list
-            parentList.Add(new GorkNode.Connection(childPort, child));
-            childList.Add(new GorkNode.Connection(parentPort, parent));
+            parentList.Add(parentConnection);
+            childList.Add(childConnection);
+
+            // Notify the nodes about the new connections
+            parent.OnOutputConnectionAdded(parentPort, parentConnection);
+            child.OnInputConnectionAdded(childPort, childConnection);
         }
 
         public void RemoveConnection(GorkNode parent, int parentPort, GorkNode child, int childPort)
@@ -238,20 +246,20 @@ namespace Gork
             List<GorkNode.Connection> childList = child.GetInputConnections(childPort);
 
 #if UNITY_EDITOR
-            if (child != null)
-            {
-                Undo.RecordObject(child, $"Removed connection from \"{child.name}\"");
-            }
-
-            if (parent != null)
-            {
-                Undo.RecordObject(parent, $"Removed connection from \"{parent.name}\"");
-            }
+            Undo.RecordObject(child, $"Removed connection from \"{child.name}\"");
+            Undo.RecordObject(parent, $"Removed connection from \"{parent.name}\"");
 #endif
+            // Create 2 new GorkNode.Connection variables which will be used to remove the connections
+            GorkNode.Connection parentConnection = new GorkNode.Connection(childPort, child);
+            GorkNode.Connection childConnection = new GorkNode.Connection(parentPort, parent);
 
             // Remove the connections from the lists
             parentList.Remove(new GorkNode.Connection(childPort, child));
             childList.Remove(new GorkNode.Connection(parentPort, parent));
+
+            // Notify the nodes about the removal of the connections
+            parent.OnOutputConnectionRemoved(parentPort, parentConnection);
+            child.OnInputConnectionRemoved(childPort, childConnection);
         }
 
 #region Parameters
@@ -611,8 +619,8 @@ namespace Gork
 #endregion
 
 #region Events
-        public delegate void OnCallExternalEvent(string eventName, object parameter);
-        public OnCallExternalEvent OnCallExternal;
+        public delegate void OnTriggerExternalEvent(string eventName, object parameter);
+        public OnTriggerExternalEvent OnTriggerExternal;
 
         private Dictionary<string, List<EventNode>> _internalEventNodesCache = null;
 
@@ -686,8 +694,6 @@ namespace Gork
             {
                 return;
             }
-
-            Debug.Log("Reset things!!!");
 
             // Get nodes of type
             _cachedGorkNodeDictionary = null;

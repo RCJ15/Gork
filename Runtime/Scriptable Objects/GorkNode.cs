@@ -99,6 +99,14 @@ namespace Gork
             });
         }
 
+        protected void SetInputPort(int index, Type type)
+        {
+            SetInputPort(index, port =>
+            {
+                port.Type = type;
+            });
+        }
+
         protected void SetInputPort(int index, string name, Type type)
         {
             SetInputPort(index, port =>
@@ -446,6 +454,48 @@ namespace Gork
             }
         }
 
+        #region Get Value From Port
+        private static Dictionary<Type, Dictionary<Type, MethodInfo>> _getValueFromPortMethodCache = new Dictionary<Type, Dictionary<Type, MethodInfo>>();
+        private static Dictionary<Type, MethodInfo> _getValueFromPortGenericMethodCache = new Dictionary<Type, MethodInfo>();
+
+        public object GetValueFromPort(int port, Type type)
+        {
+            Type thisType = GetType();
+
+            if (!_getValueFromPortMethodCache.ContainsKey(thisType))
+            {
+                _getValueFromPortMethodCache[thisType] = new Dictionary<Type, MethodInfo>();
+            }
+
+            if (!_getValueFromPortMethodCache[thisType].ContainsKey(type))
+            {
+                if (!_getValueFromPortGenericMethodCache.ContainsKey(thisType))
+                {
+                    MethodInfo getValueFromPortMethod = null;
+
+                    foreach (MethodInfo method in thisType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.InvokeMethod))
+                    {
+                        if (method.Name != nameof(GetValueFromPort))
+                        {
+                            continue;
+                        }
+
+                        if (!method.ContainsGenericParameters)
+                        {
+                            continue;
+                        }
+
+                        getValueFromPortMethod = method;
+                    }
+                    _getValueFromPortGenericMethodCache[thisType] = getValueFromPortMethod;
+                }
+
+                _getValueFromPortMethodCache[thisType].Add(type, _getValueFromPortGenericMethodCache[thisType].MakeGenericMethod(type));
+            }
+
+            return _getValueFromPortMethodCache[thisType][type].Invoke(this, new object[] { port });
+        }
+
         /// <summary>
         /// Returns a value of type <typeparamref name="T"/> from the input port with the given <paramref name="port"/> index. <para/>
         /// Will correctly convert different values with different types using a <see cref="GorkConverterAttribute"/>. <para/>
@@ -511,7 +561,6 @@ namespace Gork
                 return default;
             }
 
-
             // Get connections
             List<Connection> connections = GetInputConnections(port);
             
@@ -541,6 +590,7 @@ namespace Gork
             // This is temporary
             return default;
         }
+        #endregion
 
         /// <summary>
         /// Override this method to add custom coroutine functionality to your node.
@@ -723,6 +773,48 @@ namespace Gork
             return index >= 0 && index <= list.Count - 1 && list[index].Connections.Count > 0;
         }
 
+        #region Connection Events
+        /// <summary>
+        /// Called when an input port connection is added to this node. <para/>
+        /// Override to add custom events and behaviours when our node is connected to something. <para/>
+        /// NOTE: This is called after the actual <see cref="InputPorts"/> list is modified.
+        /// </summary>
+        public virtual void OnInputConnectionAdded(int portIndex, Connection connection)
+        {
+
+        }
+
+        /// <summary>
+        /// Called when an output port connection is added to this node. <para/>
+        /// Override to add custom events and behaviours when our node is connected to something. <para/>
+        /// NOTE: This is called after the actual <see cref="OutputPorts"/> list is modified.
+        /// </summary>
+        public virtual void OnOutputConnectionAdded(int portIndex, Connection connection)
+        {
+
+        }
+
+        /// <summary>
+        /// Called when an input port connection is removed from this node. <para/>
+        /// Override to add custom events and behaviours when our node is disconnected from something. <para/>
+        /// NOTE: This is called after the actual <see cref="InputPorts"/> list is modified.
+        /// </summary>
+        public virtual void OnInputConnectionRemoved(int portIndex, Connection connection)
+        {
+
+        }
+
+        /// <summary>
+        /// Called when an output port connection is removed from this node. <para/>
+        /// Override to add custom events and behaviours when our node is disconnected from something. <para/>
+        /// NOTE: This is called after the actual <see cref="OutputPorts"/> list is modified.
+        /// </summary>
+        public virtual void OnOutputConnectionRemoved(int portIndex, Connection connection)
+        {
+
+        }
+        #endregion
+
         /// <summary>
         /// A simple container class that contains a list of <see cref="Connection"/> for a single <see cref="GorkNode"/> Port.
         /// </summary>
@@ -738,8 +830,13 @@ namespace Gork
         [Serializable]
         public struct Connection
         {
-            // Note: Port index is the child port
+            /// <summary>
+            /// The port that the <see cref="Node"/> is connected to.
+            /// </summary>
             public int PortIndex;
+            /// <summary>
+            /// The node we are connected to.
+            /// </summary>
             public GorkNode Node;
 
             public Connection(int portIndex, GorkNode child)
@@ -761,6 +858,7 @@ namespace Gork
 
 #region Public Instance Fields
         private List<Type> _cachedInputPortTypes;
+        protected bool shouldRebuildInputPortTypes = false;
         /// <summary>
         /// Will return a list of <see cref="Type"/> that represents each input ports DataType.
         /// </summary>
@@ -768,8 +866,10 @@ namespace Gork
         {
             get
             {
-                if (_cachedInputPortTypes == null)
+                if (_cachedInputPortTypes == null || shouldRebuildInputPortTypes)
                 {
+                    shouldRebuildInputPortTypes = false;
+
                     _cachedInputPortTypes = new List<Type>();
 
                     BuildInputTypesList(_cachedInputPortTypes);
@@ -780,6 +880,7 @@ namespace Gork
         }
 
         private List<Type> _cachedOutputPortTypes;
+        protected bool shouldRebuildOutputPortTypes = false;
         /// <summary>
         /// Will return a list of <see cref="Type"/> that represents each output ports DataType.
         /// </summary>
@@ -787,8 +888,10 @@ namespace Gork
         {
             get
             {
-                if (_cachedOutputPortTypes == null)
+                if (_cachedOutputPortTypes == null || shouldRebuildOutputPortTypes)
                 {
+                    shouldRebuildOutputPortTypes = false;
+
                     _cachedOutputPortTypes = new List<Type>();
 
                     BuildOutputTypesList(_cachedOutputPortTypes);
@@ -843,12 +946,9 @@ namespace Gork
                     List<Type> inputPortTypes = new List<Type>();
                     List<Type> outputPortTypes = new List<Type>();
 
-                    // Check first for if we have the NoOutput/NoInput ports attributes
-                    // Leave the list empty if we have one of these attributes attached
-
-                    void PortCheck<T>(bool isOutputPorts, IEnumerable<T> portEnumerable) where T : GorkPortAttribute
+                    // Create local method to add our port types to the appropriate list
+                    void AddTypesToList<T>(List<Type> list, IEnumerable<T> portEnumerable) where T : GorkPortAttribute
                     {
-                        List<Type> list = isOutputPorts ? outputPortTypes : inputPortTypes;
                         int count = 0;
 
                         foreach (T port in portEnumerable)
@@ -858,22 +958,27 @@ namespace Gork
                             list.Add(port.PortType);
                         }
 
+                        // By default have just a single signal port
                         if (count == 0)
                         {
                             list.Add(GorkUtility.SignalType);
                         }
                     }
 
+                    // Check first for if we have the NoOutput/NoInput ports attributes
+                    // Leave the list empty if we have one of these attributes attached
+
                     if (type.GetCustomAttribute<NoInputPortsAttribute>() == null)
                     {
-                        PortCheck(false, type.GetCustomAttributes<GorkInputPortAttribute>());
+                        AddTypesToList(inputPortTypes, type.GetCustomAttributes<GorkInputPortAttribute>());
                     }
 
                     if (type.GetCustomAttribute<NoOutputPortsAttribute>() == null)
                     {
-                        PortCheck(true, type.GetCustomAttributes<GorkOutputPortAttribute>());
+                        AddTypesToList(outputPortTypes, type.GetCustomAttributes<GorkOutputPortAttribute>());
                     }
 
+                    // Set the static cache dictionaries
                     StaticInputPortTypes.Add(type, inputPortTypes);
                     StaticOutputPortTypes.Add(type, outputPortTypes);
 

@@ -1,5 +1,0 @@
-<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
-    <ui:VisualElement name="QuestionMarkButton" style="width: 32px; justify-content: center; align-items: center;">
-        <ui:VisualElement name="Icon" style="width: 12px; height: 12px; border-top-left-radius: 1px; border-bottom-left-radius: 1px; border-top-right-radius: 1px; border-bottom-right-radius: 1px;" />
-    </ui:VisualElement>
-</ui:UXML>

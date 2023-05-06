@@ -1,0 +1,64 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="True">
+    <ui:VisualElement name="Parent" style="flex-grow: 1;">
+        <uie:Toolbar style="border-bottom-width: 2px; overflow: hidden; border-bottom-color: rgb(35, 35, 35); height: 23px;">
+            <ui:VisualElement name="Left" style="flex-grow: 1; flex-direction: row;">
+                <uie:ToolbarButton text="Highlight Current Graph" display-tooltip-when-elided="true" focusable="false" name="HighlightGraph" tooltip="Will ping the currently edited Gork Graph asset and show where it&apos;s located in the project." style="overflow: hidden; -unity-text-align: middle-center; border-left-width: 0; left: auto; margin-left: 0; margin-right: 5px;" />
+                <uie:ToolbarButton text="Save Copy..." display-tooltip-when-elided="true" focusable="false" name="SaveCopy" tooltip="Opens a window to save a copy of your Gork Graph as an asset." style="left: auto; overflow: hidden; -unity-text-align: middle-center; margin-left: 5px; margin-right: 5px;" />
+                <uie:ToolbarButton text="Open Graph" display-tooltip-when-elided="true" focusable="false" name="OpenGraph" tooltip="Opens a new window where you can select a new Gork Graph asset to open." style="left: auto; overflow: hidden; -unity-text-align: middle-center; margin-left: 5px; margin-right: 5px;" />
+            </ui:VisualElement>
+            <ui:VisualElement name="Right" style="flex-grow: 1; flex-direction: row-reverse;">
+                <uie:ToolbarButton text="Minimap" display-tooltip-when-elided="true" focusable="false" name="ToggleMinimap" tooltip="Shows and hides the minimap." style="-unity-text-align: middle-left; overflow: hidden; width: 80px; border-right-width: 0; left: auto; margin-left: 5px;">
+                    <ui:VisualElement name="OpenImage" style="left: 58px; position: absolute; top: 2px; right: 0; bottom: 0; height: 18px; width: 18px; background-image: resource(&apos;Gork Textures/gork_minimap_show&apos;);" />
+                    <ui:VisualElement name="ClosedImage" style="left: 58px; position: absolute; top: 2px; right: 0; bottom: 0; height: 18px; width: 18px; background-image: resource(&apos;Gork Textures/gork_minimap_hide&apos;);" />
+                    <ui:VisualElement name="Highlight" style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; background-color: rgba(255, 255, 255, 0.15);" />
+                </uie:ToolbarButton>
+                <uie:ToolbarButton text="Open Wiki" display-tooltip-when-elided="true" focusable="false" name="OpenWiki" tooltip="Opens the Gork Graph wiki window." style="overflow: hidden; -unity-text-align: middle-center; left: auto; margin-right: 5px; margin-left: 5px;" />
+            </ui:VisualElement>
+        </uie:Toolbar>
+        <Gork.Editor.GorkSplitView fixed-pane-initial-dimension="200" orientation="Horizontal">
+            <ui:VisualElement name="InspectorViewParent" style="min-width: 100px;">
+                <uie:Toolbar name="TopBar" style="border-bottom-width: 2px; background-color: rgb(35, 35, 35);">
+                    <uie:ToolbarButton focusable="false" text="+" name="AddButton" tooltip="Add a new element to the current list." display-tooltip-when-elided="true" style="overflow: hidden; -unity-font-style: normal; padding-left: 2px; font-size: 25px; padding-right: 0; padding-top: 0; -unity-text-align: middle-left; padding-bottom: 5px; border-left-width: 0; border-right-width: 2px; justify-content: center; left: 0; min-height: 0; position: absolute; right: auto; bottom: 0; top: 0; width: 40px; min-width: 0;">
+                        <ui:VisualElement name="Image" style="left: 23px; position: absolute; top: 6.5px; right: 0; bottom: 0; height: 7px; width: 7.5px; background-image: resource(&apos;Gork Textures/gork_down_arrow&apos;);" />
+                    </uie:ToolbarButton>
+                    <uie:ToolbarPopupSearchField focusable="true" name="SearchTextField" style="margin-left: 0; margin-right: 0; margin-top: 0; margin-bottom: 0; min-width: 0; min-height: 0; border-left-color: rgb(33, 33, 33); border-right-color: rgb(33, 33, 33); border-top-color: rgb(33, 33, 33); border-bottom-color: rgb(33, 33, 33); width: auto; left: 40px; right: 40px; max-width: none; position: absolute; top: 0; bottom: 0;">
+                        <ui:Label text="Search..." display-tooltip-when-elided="true" name="PlaceholderText" picking-mode="Ignore" style="position: absolute; left: 15px; top: 0; right: 0; bottom: 0; -unity-text-align: middle-left; color: rgba(210, 210, 210, 0.5); -unity-font-style: italic; margin-left: 0; margin-right: 100%; padding-right: 0;" />
+                    </uie:ToolbarPopupSearchField>
+                    <uie:ToolbarButton focusable="false" name="SplitViewCollapseButton" tooltip="Collapses or minimizes the side bar." display-tooltip-when-elided="true" style="overflow: hidden; border-left-width: 2px; border-right-width: 0; justify-content: space-around; left: auto; min-height: 0; position: absolute; right: 0; bottom: 0; top: 0; width: 22px; min-width: 0; align-items: center; -unity-text-align: middle-center; white-space: nowrap; padding-left: 0; padding-right: 0; padding-top: 0; padding-bottom: 0;">
+                        <ui:VisualElement name="Arrow" style="background-image: resource(&apos;Gork Textures/gork_down_arrow&apos;); width: 11px; height: 11px; rotate: 90deg;" />
+                    </uie:ToolbarButton>
+                    <uie:ToolbarButton focusable="false" name="SplitViewResetButton" tooltip="Resets the side bars size back to default." display-tooltip-when-elided="true" style="overflow: hidden; border-left-width: 2px; border-right-width: 0; justify-content: space-around; left: auto; min-height: 0; position: absolute; right: 22px; bottom: 0; top: 0; width: 22px; min-width: 0; align-items: center; -unity-text-align: middle-center; white-space: nowrap; padding-left: 0; padding-right: 0; padding-top: 0; padding-bottom: 0;">
+                        <ui:VisualElement name="Arrow" style="background-image: resource(&apos;Gork Textures/gork_reset_icon&apos;); width: 13.5px; height: 12px;" />
+                    </uie:ToolbarButton>
+                </uie:Toolbar>
+                <Gork.Editor.GorkInspectorView focusable="true" name="GorkInspectorView" style="left: 0; top: 0; right: 0; bottom: 0; position: relative; flex-grow: 1;" />
+                <uie:Toolbar name="BottomBar" style="top: 0; bottom: 0; position: relative; right: 0; left: 0; height: 36px;">
+                    <uie:ToolbarButton text="Parameters" display-tooltip-when-elided="true" focusable="false" name="Parameters" style="left: 0; position: relative; right: 0; bottom: 0; top: 0; -unity-text-align: middle-center; border-top-width: 2px; white-space: nowrap; border-left-width: 0; overflow: hidden; font-size: 12%; flex-grow: 1;">
+                        <ui:VisualElement name="Highlight" style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; background-color: rgba(255, 255, 255, 0.15);" />
+                    </uie:ToolbarButton>
+                    <uie:ToolbarButton text="Tags" display-tooltip-when-elided="true" focusable="false" name="Tags" style="left: 0; position: relative; right: 0; bottom: 0; top: 0; -unity-text-align: middle-center; border-top-width: 2px; white-space: nowrap; border-left-width: 1px; overflow: hidden; font-size: 12%; flex-grow: 1;">
+                        <ui:VisualElement name="Highlight" style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; background-color: rgba(255, 255, 255, 0.15);" />
+                    </uie:ToolbarButton>
+                    <uie:ToolbarButton text="Events" display-tooltip-when-elided="true" focusable="false" name="Events" style="left: 0; right: 0; position: relative; bottom: 0; top: 0; -unity-text-align: middle-center; border-top-width: 2px; white-space: nowrap; border-right-width: 0; overflow: hidden; font-size: 12%; align-items: auto; flex-grow: 1;">
+                        <ui:VisualElement name="Highlight" style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; background-color: rgba(255, 255, 255, 0.15);" />
+                    </uie:ToolbarButton>
+                </uie:Toolbar>
+            </ui:VisualElement>
+            <ui:VisualElement name="MainViewParent" style="flex-grow: 1; min-width: 100px;">
+                <Gork.Editor.GorkGraphView focusable="true" style="flex-grow: 1;" />
+                <ui:Label text="Not Editing..." name="CurrentlyEditingText" picking-mode="Ignore" style="position: absolute; left: 0; top: 0; right: 0; bottom: initial; opacity: 1; -unity-text-align: middle-center; height: 20px; background-color: rgba(0, 0, 0, 0.5); overflow: hidden;" />
+                <uie:ToolbarButton focusable="false" name="SplitViewExpandButton" tooltip="Expands or maximizes the side bar." display-tooltip-when-elided="true" style="justify-content: space-around; left: auto; min-height: 0; position: absolute; right: auto; bottom: 0; top: -3px; width: 21px; min-width: 0; align-items: center; -unity-text-align: middle-center; white-space: nowrap; padding-left: 0; padding-right: 0; padding-top: 0; padding-bottom: 0; border-left-width: 0; border-right-width: 2px; border-top-width: 2px; border-bottom-width: 2px; height: 24px; border-bottom-right-radius: 7px; border-top-right-radius: 7px; flex-direction: row;">
+                    <ui:VisualElement name="Line" style="width: 10px; height: 1.5px; rotate: -90deg; left: 1px; background-color: rgb(166, 166, 166);" />
+                    <ui:VisualElement name="Arrow" style="background-image: resource(&apos;Gork Textures/gork_down_arrow&apos;); width: 10px; height: 9px; rotate: -90deg; left: -3px;" />
+                </uie:ToolbarButton>
+            </ui:VisualElement>
+        </Gork.Editor.GorkSplitView>
+    </ui:VisualElement>
+    <ui:Label text="No Gork Graph is being edited!" display-tooltip-when-elided="true" name="NoGraphText" style="flex-grow: 1; position: absolute; left: 0; top: 0; right: 0; bottom: 0; -unity-text-align: middle-center; font-size: 30px; color: rgb(255, 255, 255); -unity-font-style: bold; background-color: rgba(0, 0, 0, 0.5); justify-content: center; align-items: center; padding-left: 0; padding-right: 0; padding-top: 0; padding-bottom: 0; flex-direction: row;">
+        <ui:VisualElement name="ButtonsParent" style="position: relative; left: 0; right: 0; bottom: 0; top: 35px; flex-direction: row; align-items: stretch; justify-content: center; flex-grow: 1;">
+            <ui:Button text="Open Existing" display-tooltip-when-elided="true" name="OpenExistingButton" focusable="false" style="width: 25%; height: 30px; font-size: 20px;" />
+            <ui:Button text="Create New" display-tooltip-when-elided="true" name="CreateNewButton" focusable="false" style="width: 25%; height: 30px; font-size: 20px; opacity: 1; top: 0; bottom: 0; right: 0; left: 0;" />
+        </ui:VisualElement>
+        <ui:VisualElement />
+    </ui:Label>
+</ui:UXML>

@@ -9,7 +9,7 @@ using UnityEditor.Experimental.GraphView;
 namespace Gork.Editor
 {
     /// <summary>
-    /// 
+    /// The search window that allows you to search after every single <see cref="GorkGraph"/> in your project.
     /// </summary>
     public class GorkAssetSearchWindow : ScriptableObject, ISearchWindowProvider
     {

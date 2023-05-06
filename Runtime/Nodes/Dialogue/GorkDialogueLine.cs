@@ -107,8 +107,15 @@ namespace Gork
                 }
                 else if (inTag)
                 {
-                    _cachedTagBuilder.Append(c);
-                    continue;
+                    if (c == '<')
+                    {
+                        inTag = false;
+                    }
+                    else
+                    {
+                        _cachedTagBuilder.Append(c);
+                        continue;
+                    }
                 }
 
                 _cachedNoCustomTagsBuilder.Append(c);

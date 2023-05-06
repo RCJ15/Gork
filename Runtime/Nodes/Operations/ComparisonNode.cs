@@ -1,5 +1,10 @@
 using System;
 using System.Collections.Generic;
+using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
+using UnityEngine.UIElements;
+#endif
 
 namespace Gork
 {
@@ -8,14 +13,14 @@ namespace Gork
     /// </summary>
     [GorkNodeInfo("Operations/Comparisons/Equals (==)", GorkColors.BOOL_COLOR, -6, WikiName = "Equals", 
         WikiSummary = "Outputs a bool based on if both of it's inputs are equal to eachother",
-        WikiDescription = "Takes in 2 generic objects and compares if they are equal to eachother.\n" +
+        WikiDescription = "Takes in 2 values and compares if they are equal to eachother.\n" +
         "Use the Not Equals node variant to check for things that are NOT equal to eachother",
         WikiInputPorts = WikiEqualsInputPorts,
         WikiUsage = "Use this node to check if 2 values are equal to eachother in GorkGraph")]
 
     [GorkNodeInfo("Operations/Comparisons/Not Equals (!=)", GorkColors.BOOL_COLOR, -5, WikiName = "Not Equals",
         WikiSummary = "Outputs a bool based on if it's inputs are NOT equal to eachother",
-        WikiDescription = "Takes in 2 generic objects and compares if they are NOT equal to eachother.\n" +
+        WikiDescription = "Takes in 2 values and compares if they are NOT equal to eachother.\n" +
         "Use the Equals node variant to check for things that are equal to eachother",
         WikiInputPorts = WikiEqualsInputPorts,
         WikiUsage = "Use this node to check if 2 values are NOT equal to eachother in GorkGraph")]
@@ -46,8 +51,29 @@ namespace Gork
     [GorkOutputPort("Result", typeof(bool), WikiDescription = "The result of the comparison")]
     public class ComparisonNode : GorkNode
     {
-        private const string WikiEqualsInputPorts = "<b>X (Object)</b> - The first object that is going to get compared.\n<b>Y (Object)</b> - The second object that is going to get compared";
+        private const string WikiEqualsInputPorts = "<b>X (Dynamic)</b> - The first object that is going to get compared.\n<b>Y (Dynamic)</b> - The second object that is going to get compared\n\nThe data type of these ports is determined by whichever connection was first connected to the node, otherwise the node will default to have the object type.\n\nUse the Swap Type button to swap the types if both inputs give different data types (eg. float & int comparison)";
         private const string WikiNumbersInputPorts = "<b>X (Float)</b> - The first number that is going to get compared.\n<b>Y (Float)</b> - The second number that is going to get compared";
+
+        [HideInInspector] [SerializeField] private string comparisonTypeName;
+
+        private Type _comparisonTypeCache;
+        public Type ComparisonType
+        {
+            get
+            {
+                if (_comparisonTypeCache == null)
+                {
+                    _comparisonTypeCache = Type.GetType(comparisonTypeName);
+
+                    if (_comparisonTypeCache == null)
+                    {
+                        _comparisonTypeCache = typeof(object);
+                    }
+                }
+
+                return _comparisonTypeCache;
+            }
+        }
 
         protected override void BuildInputTypesList(List<Type> list)
         {
@@ -66,14 +92,12 @@ namespace Gork
         }
 
 #if UNITY_EDITOR
+        private bool _isEqualsNode = false;
+        private Button _swapTypeButtonContainer;
+
         public override void OnViewEnable()
         {
-            // Equals and Not Equals
-            if (AttributeID < 2)
-            {
-                SetInputPort(0, "X", typeof(object));
-                SetInputPort(1, "Y", typeof(object));
-            }
+            _isEqualsNode = AttributeID < 2;
 
             switch (AttributeID)
             {
@@ -102,7 +126,151 @@ namespace Gork
                     break;
             }
 
+            // Equals and Not Equals
+            if (_isEqualsNode)
+            {
+                if (!string.IsNullOrEmpty(comparisonTypeName))
+                {
+                    _comparisonTypeCache = Type.GetType(comparisonTypeName);
+                }
+                else
+                {
+                    _comparisonTypeCache = null;
+                }
+
+                UpdateEqualsNode();
+                shouldRebuildInputPortTypes = true;
+
+                _swapTypeButtonContainer = new Button(SwapType);
+                _swapTypeButtonContainer.focusable = false;
+                _swapTypeButtonContainer.text = "Swap Type";
+
+                // Update the swap type button
+                UpdateSwapTypeButton();
+
+                OnExpand();
+            }
+            //_outputContainerWidth = NodeView.outputContainer.style.width.value;
+
             UpdateNodeView();
+        }
+
+        public override void OnExpand()
+        {
+            if (!_isEqualsNode)
+            {
+                return;
+            }
+
+            // Add swap type button
+            NodeView.outputContainer.Add(_swapTypeButtonContainer);
+        }
+
+        public override void OnCollapse()
+        {
+            if (!_isEqualsNode)
+            {
+                return;
+            }
+
+            // Remove swap type button
+            NodeView.outputContainer.Remove(_swapTypeButtonContainer);
+        }
+
+        private void SwapType()
+        {
+            Type type1 = GetTypeFromInputConnection(0);
+            Type type2 = GetTypeFromInputConnection(1);
+
+            if (type1 != _comparisonTypeCache)
+            {
+                SetComparisonType(type1);
+            }
+            else if (type2 != _comparisonTypeCache)
+            {
+                SetComparisonType(type2);
+            }
+        }
+
+        private void UpdateSwapTypeButton()
+        {
+            if (_isEqualsNode)
+            {
+                _swapTypeButtonContainer.SetEnabled(HasInputConnection(0) && HasInputConnection(1) && GetTypeFromInputConnection(0) != GetTypeFromInputConnection(1));
+            }
+            else
+            {
+                _swapTypeButtonContainer.SetEnabled(true);
+            }
+        }
+
+        public override void OnInputConnectionAdded(int portIndex, Connection connection)
+        {
+            if (!_isEqualsNode)
+            {
+                return;
+            }
+
+            if (!HasInputConnection((portIndex + 1) % 2))
+            {
+                SetComparisonType(GetTypeFromConnection(connection));
+            }
+
+            UpdateSwapTypeButton();
+        }
+
+        public override void OnInputConnectionRemoved(int portIndex, Connection connection)
+        {
+            if (!_isEqualsNode)
+            {
+                return;
+            }
+
+            int otherPortIndex = (portIndex + 1) % 2;
+            if (HasInputConnection(otherPortIndex))
+            {
+                SetComparisonType(GetTypeFromInputConnection(otherPortIndex));
+            }
+            else
+            {
+                SetComparisonType(typeof(object));
+            }
+
+            UpdateSwapTypeButton();
+        }
+
+        private Type GetTypeFromInputConnection(int index)
+        {
+            Connection connection = GetInputConnections(index)[0];
+
+            return GetTypeFromConnection(connection);
+        }
+
+        private Type GetTypeFromConnection(Connection connection)
+        {
+            return connection.Node.OutputPortTypes[connection.PortIndex];
+        }
+
+        private void SetComparisonType(Type newType)
+        {
+            _comparisonTypeCache = newType;
+            comparisonTypeName = _comparisonTypeCache.FullName;
+
+            UpdateEqualsNode();
+            shouldRebuildInputPortTypes = true;
+
+            UpdateNodeView();
+        }
+
+        private void UpdateEqualsNode()
+        {
+            if (_comparisonTypeCache == null)
+            {
+                _comparisonTypeCache = typeof(object);
+            }
+
+            SetInputPort(0, _comparisonTypeCache);
+            SetInputPort(1, _comparisonTypeCache);
         }
 #endif
 
@@ -111,16 +279,41 @@ namespace Gork
             // Equals and Not Equals
             if (AttributeID < 2)
             {
-                object obj1 = GetValueFromPort<object>(0);
-                object obj2 = GetValueFromPort<object>(1);
+                object obj1 = GetValueFromPort(0, ComparisonType);
+                object obj2 = GetValueFromPort(1, ComparisonType);
+
+                bool result = obj1.Equals(obj2);
+
+                Debug.Log(obj1 + " == " + obj2 + " : " + result);
+
+                /*
+                bool result;
+
+                // They are different types
+                Type obj1Type = obj1.GetType();
+                Type obj2Type = obj2.GetType();
+
+                if (obj1Type != obj2Type)
+                {
+                    // Check if their json result is the same (not sure how optimized this is but I'm guessing it's bad)
+                    Debug.Log(GorkUtility.ToJson(obj1, obj1Type));
+                    Debug.Log(GorkUtility.ToJson(obj2, obj2Type));
+
+                    result = GorkUtility.ToJson(obj1, obj1Type) == GorkUtility.ToJson(obj2, obj2Type);
+                }
+                else
+                {
+                    result = obj1.Equals(obj2);
+                }
+                */
 
                 switch (AttributeID)
                 {
                     default:
-                        return obj1 == obj2;
+                        return result;
 
                     case 1:
-                        return obj1 != obj2;
+                        return !result;
                 }
             }
 

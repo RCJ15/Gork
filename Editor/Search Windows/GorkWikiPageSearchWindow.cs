@@ -9,7 +9,7 @@ using UnityEditor.Experimental.GraphView;
 namespace Gork.Editor
 {
     /// <summary>
-    /// 
+    /// The search window that allows you to search for every single <see cref="GorkWikiPage"/>.
     /// </summary>
     public class GorkWikiPageSearchWindow : ScriptableObject, ISearchWindowProvider
     {

@@ -17,8 +17,8 @@ namespace Gork.Editor
 
         private List<SearchTreeEntry> _searchTree = null;
 
-        public Vector2 Position;
-        public GorkPort EdgePort;
+        public Vector2 Position { get; set; }
+        public GorkPort EdgePort { get; set; }
 
         public List<SearchTreeEntry> CreateSearchTree(SearchWindowContext context)
         {

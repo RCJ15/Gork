@@ -18,6 +18,9 @@ namespace Gork.Editor
 
         public GorkGraphView GraphView;
 
+        private Vector3 _cachedMousePos;
+        public Vector3 MousePos => _cachedMousePos;
+
         /*
         public int PortIndex
         {
@@ -38,8 +41,13 @@ namespace Gork.Editor
         */
         public int PortIndex;
 
+        private static readonly Color _intColor = new Color(0.580392f, 0.5058823f, 0.90196078431f, 1);
+        private static readonly Color _floatColor = new Color(0.517647058f, 0.894117647f, 0.905882352f, 1);
+        private static readonly Color _stringColor = new Color(0.98823529f, 0.84313725f, 0.4313725f, 1);
         private static readonly Color _boolColor = new Color(0.549f, 1, 0.556f, 1);
         private static readonly Color _objColor = new Color(0.3372f, 0.6117f, 0.8392f, 1);
+
+        private Type _oldPortType = null;
 
         protected GorkPort(Orientation orientation, Direction direction, Capacity capacity, Type type, GorkNodeView nodeView) : base(orientation, direction, capacity, type)
         {
@@ -47,13 +55,42 @@ namespace Gork.Editor
             Node = NodeView.Node;
             GraphView = NodeView.GraphView;
 
+            RegisterCallback<MouseMoveEvent>(OnMouseMoveEvent);
+
             UpdateColor();
+        }
+
+        private void OnMouseMoveEvent(MouseMoveEvent evt)
+        {
+            _cachedMousePos = evt.mousePosition;
         }
 
         public void UpdateColor()
         {
-            // Bool is normally gray (for some reason) so this will instead force it to default to a light green color
-            if (portType == typeof(bool))
+            if (_oldPortType != null && _oldPortType == portType)
+            {
+                return;
+            }
+
+            _oldPortType = portType;
+
+            // Hardcoded colors (disgusting code)
+            // I know that GraphView automatically sets colors for Int, Float and String
+            // but doing this will fix if any port decides to update their color after start
+            if (portType == typeof(int))
+            {
+                portColor = _intColor;
+            }
+            else if (portType == typeof(float))
+            {
+                portColor = _floatColor;
+            }
+            else if (portType == typeof(string))
+            {
+                portColor = _stringColor;
+            }
+            // Bool is normally gray (for some reason) so this will force it to default to a light green color
+            else if (portType == typeof(bool))
             {
                 portColor = _boolColor;
             }
@@ -66,6 +103,12 @@ namespace Gork.Editor
             else if (GorkPortColorAttribute.Attributes.TryGetValue(portType, out var attribute))
             {
                 portColor = attribute.GetColor();
+            }
+
+            // Update the colors of every edge connected to this port
+            foreach (Edge edge in NodeView.GetConnections(direction == Direction.Input ? NodeView.inputContainer : NodeView.outputContainer))
+            {
+                GorkEdge.UpdateColors(edge);
             }
         }
 
@@ -97,69 +140,10 @@ namespace Gork.Editor
         {
             GorkPort port = new GorkPort(orientation, direction, Capacity.Multi, type, nodeView);
             
-            port.m_EdgeConnector = new EdgeConnector<GorkEdge>(new EdgeConnector(nodeView, port));
+            port.m_EdgeConnector = new EdgeConnector<GorkEdge>(new GorkEdgeConnector(nodeView, port));
 
             port.AddManipulator(port.m_EdgeConnector);
             return port;
-        }
-
-        /// <summary>
-        /// The class that connects <see cref="GorkEdge"/> together with different <see cref="GorkPort"/>.
-        /// </summary>
-        public class EdgeConnector : IEdgeConnectorListener
-        {
-            private GorkNodeView _nodeView;
-            private GorkNode _node;
-            private GorkPort _port;
-
-            private GraphViewChange _graphViewChange;
-            private List<Edge> _edgesToCreate;
-
-            public EdgeConnector(GorkNodeView nodeView, GorkPort port)
-            {
-                _nodeView = nodeView;
-                _node = _nodeView.Node;
-                _port = port;
-
-                _edgesToCreate = new List<Edge>();
-
-                _graphViewChange.edgesToCreate = _edgesToCreate;
-            }
-
-            public void OnDropOutsidePort(Edge edge, Vector2 position)
-            {
-                NodeCreationContext context = new NodeCreationContext() { screenMousePosition = GUIUtility.GUIToScreenPoint(Event.current.mousePosition) };
-
-                GorkGraphView graph = _nodeView.GraphView;
-                graph.GorkSearchWindow.Position = graph.TransformScreenPos(position);
-                graph.OpenNodeCreationSearchWindow(context, _port);
-            }
-
-            public void OnDrop(GraphView graphView, Edge edge)
-            {
-                _edgesToCreate.Clear();
-                _edgesToCreate.Add(edge);
-
-                var edgesToCreate = _edgesToCreate;
-                if (graphView.graphViewChanged != null)
-                {
-                    edgesToCreate = graphView.graphViewChanged(_graphViewChange).edgesToCreate;
-                }
-
-                GorkEdge gorkEdge = edge as GorkEdge;
-
-                if (gorkEdge != null)
-                {
-                    gorkEdge.GraphView = graphView as GorkGraphView;
-                }
-
-                foreach (Edge e in edgesToCreate)
-                {
-                    graphView.AddElement(e);
-                    edge.input.Connect(e);
-                    edge.output.Connect(e);
-                }
-            }
         }
     }
 }

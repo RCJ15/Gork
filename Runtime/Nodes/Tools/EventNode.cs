@@ -290,7 +290,7 @@ namespace Gork
                         break;
                 }
 
-                Graph.OnCallExternal.Invoke(EventName, parameter);
+                Graph.OnTriggerExternal.Invoke(EventName, parameter);
             }
             // Internal
             else

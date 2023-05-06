@@ -6,9 +6,11 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
 using UnityEngine.UIElements;
+using UnityEditor.UIElements;
 using UnityEditor.Experimental.GraphView;
 
 using Object = UnityEngine.Object;
+using UnityEngine.UIElements.Experimental;
 
 namespace Gork.Editor
 {
@@ -25,12 +27,22 @@ namespace Gork.Editor
         private GorkNodeSearchWindow _searchWindow;
         public GorkNodeSearchWindow GorkSearchWindow => _searchWindow;
 
-        private MiniMap _miniMap;
-        public MiniMap MiniMap => _miniMap;
+        #region Visual Elements
+        private GorkMiniMap _miniMap;
+        public GorkMiniMap MiniMap => _miniMap;
 
+        public GorkInspectorView Inspector { get; set; }
+        #endregion
+
+        #region Mouse Position
         private Vector3 _cachedMousePos;
-        public Vector3 MousePos => TransformScreenPos(_cachedMousePos);
-        public Vector2 TransformScreenPos(Vector2 screenPos) => viewTransform.matrix.inverse.MultiplyPoint(screenPos);
+        public Vector3 MousePos => LocalToViewPos(_cachedMousePos);
+
+        /// <summary>
+        /// Transforms the given <paramref name="localPos"/> into a position inside this view. (Meaning it's modifed by zoom and scroll offset)
+        /// </summary>
+        public Vector2 LocalToViewPos(Vector2 localPos) => viewTransform.matrix.inverse.MultiplyPoint(localPos);
+        #endregion
 
         public Dictionary<GorkNode, GorkNodeView> SubscribedNodes = new Dictionary<GorkNode, GorkNodeView>();
         public Dictionary<GorkGraph.GroupData, GorkGroup> GorkGroups = new Dictionary<GorkGraph.GroupData, GorkGroup>();
@@ -64,7 +76,7 @@ namespace Gork.Editor
             viewTransformChanged += _ => SaveScrollAndZoomData();
 
             #region Create minimap
-            _miniMap = new MiniMap()
+            _miniMap = new GorkMiniMap()
             {
                 anchored = GorkEditorSaveData.MinimapAnchored,
             };
@@ -88,6 +100,7 @@ namespace Gork.Editor
 
             RegisterCallback<ValidateCommandEvent>(OnValidateCommand);
             RegisterCallback<MouseMoveEvent>(OnMouseMoveEvent);
+            RegisterCallback<FocusInEvent>(OnFocusIn);
 
             // Subscribe to the graphViewChanged callback
             graphViewChanged += OnGraphViewChanged;
@@ -111,17 +124,9 @@ namespace Gork.Editor
 
             GorkEditorSaveData.DisplayMinimap = _miniMap.visible;
         }
-        
-        private void OnMouseMoveEvent(MouseMoveEvent evt)
-        {
-            //_cachedMousePos = GUIUtility.GUIToScreenPoint(Event.current.mousePosition);
-            _cachedMousePos = evt.localMousePosition;
-        }
 
         private void OnValidateCommand(ValidateCommandEvent evt)
         {
-            //Debug.Log(evt.commandName);
-
             PasteData pasteData = null;
             bool duplicated = false;
 
@@ -195,6 +200,22 @@ namespace Gork.Editor
             }
 
             TryAddPasteDataToClipboard(pasteData);
+        }
+
+        private void OnMouseMoveEvent(MouseMoveEvent evt)
+        {
+            _cachedMousePos = evt.localMousePosition;
+        }
+
+        private void OnFocusIn(FocusInEvent e)
+        {
+            if (Inspector == null)
+            {
+                return;
+            }
+
+            Inspector.Blur();
+            isReframable = true;
         }
 
         private void TryAddPasteDataToClipboard(PasteData data)
@@ -681,8 +702,6 @@ namespace Gork.Editor
 
             }, GorkEditorSaveData.DisplayTags ? DropdownMenuAction.Status.Checked : DropdownMenuAction.Status.Normal);
 
-            PasteData pasteData = null;
-
             // Add options for gork node view
             if (nodes != null)
             {
@@ -823,6 +842,8 @@ namespace Gork.Editor
             }
 
             #region Copy Paste Magic
+            PasteData pasteData = null;
+
             // Add a seperator
             menu.AppendSeparator();
 
@@ -931,13 +952,13 @@ namespace Gork.Editor
                 // Is not signal?
                 if (!thisType.IsSignal())
                 {
-                    // String type
+                    // String types are always compatable
                     if (type == typeof(string))
                     {
                         compatiblePorts.Add(port);
                         continue;
                     }
-                    // Generic c# system.object type
+                    // Generic c# system.object types are also always compatible
                     else if (type == typeof(object))
                     {
                         compatiblePorts.Add(port);
@@ -945,8 +966,10 @@ namespace Gork.Editor
                     }
                 }
 
+                // If the types are different from eachother, it means that we are trying to convert one type of data into another
                 if (thisType != type)
                 {
+                    // See if there exists a conversion from thisType to type which is done through two dictionary checks
                     if (!GorkConverterAttribute.GorkConvertion.ContainsKey(thisType))
                     {
                         continue;
@@ -958,9 +981,11 @@ namespace Gork.Editor
                     }
                 }
 
+                // Add the port as compatible
                 compatiblePorts.Add(port);
             }
 
+            // Return the new list
             return compatiblePorts;
         }
 

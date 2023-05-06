@@ -54,10 +54,23 @@ This also means that only the Nodes are documented.",
             BottomText = bottomText;
         }
 
+        public GorkWikiPage(string location, string title, string summary, string mainText, string bottomText, int order) : this(location, title, summary, mainText, bottomText)
+        {
+            Order = order;
+        }
+
+        public GorkWikiPage(string location, string title, string summary, string mainText, string bottomText, int order, Color color) : this(location, title, summary, mainText, bottomText, order)
+        {
+            Color = color;
+        }
+
         #region GWP Files
         private const string LocationKeyword = "location";
         private const string TitleKeyword = "title";
         private const string SummaryKeyword = "summary";
+        private const string OrderKeyword = "order";
+        private const string BottomTextKeyword = "bottom";
+        private const string ColorKeyword = "color";
 
         private static readonly Dictionary<string, string> _gwpFileDataCache = new Dictionary<string, string>();
         private static readonly Dictionary<string, GorkWikiPage> _gwpWikiPageCache = new Dictionary<string, GorkWikiPage>();
@@ -80,8 +93,12 @@ This also means that only the Nodes are documented.",
             }
 
             string location = null;
-            string title = "Title";
+            string title = Path.GetFileNameWithoutExtension(gwpFilePath);
             string summary = null;
+            string bottomText = "GWP Text File Page";
+            int order = -999;
+            Color color = Color.clear;
+
             int builderAddAmount = 0;
 
             string keyword;
@@ -157,6 +174,25 @@ This also means that only the Nodes are documented.",
                         summary = GetKeywordValue();
                         continue;
 
+                    case OrderKeyword:
+                        int.TryParse(GetKeywordValue(), out order);
+                        continue;
+
+                    case BottomTextKeyword:
+                        bottomText = GetKeywordValue();
+                        continue;
+
+                    case ColorKeyword:
+                        string colorText = GetKeywordValue();
+
+                        if (!colorText.StartsWith('#'))
+                        {
+                            colorText = '#' + colorText;
+                        }
+
+                        ColorUtility.TryParseHtmlString(colorText, out color);
+                        continue;
+
                     // Assume it's a main text line and begin adding to the main text
                     default:
                         addingMainText = true;
@@ -166,7 +202,7 @@ This also means that only the Nodes are documented.",
             }
 
             // Create new page
-            GorkWikiPage page = new GorkWikiPage(location, title, summary, _stringBuilderCache.ToString());
+            GorkWikiPage page = new GorkWikiPage(location, title, summary, _stringBuilderCache.ToString(), bottomText, order, color);
 
             // Fill the 2 dicitonary caches
             _gwpFileDataCache[gwpFilePath] = text;
