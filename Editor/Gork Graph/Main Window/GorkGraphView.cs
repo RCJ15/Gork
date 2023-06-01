@@ -73,30 +73,9 @@ namespace Gork.Editor
             // Open search window when node creation is requested
             //nodeCreationRequest = context => OpenNodeCreationSearchWindow(context);
 
-            viewTransformChanged += _ => SaveScrollAndZoomData();
+            //viewTransformChanged += _ => SaveScrollAndZoomData();
 
-            #region Create minimap
-            _miniMap = new GorkMiniMap()
-            {
-                anchored = GorkEditorSaveData.MinimapAnchored,
-            };
-
-            _miniMap.SetPosition(GorkEditorSaveData.MinimapRect);
-            _miniMap.generateVisualContent += _ => SaveMinimapData();
-
-            Add(_miniMap);
-
-            _miniMap.visible = GorkEditorSaveData.DisplayMinimap;
-
-            StyleColor backgroundColor = new StyleColor(new Color32(29, 29, 30, 255));
-            StyleColor borderColor = new StyleColor(new Color32(51, 51, 51, 255));
-
-            _miniMap.style.backgroundColor = backgroundColor;
-            _miniMap.style.borderTopColor = borderColor;
-            _miniMap.style.borderRightColor = borderColor;
-            _miniMap.style.borderBottomColor = borderColor;
-            _miniMap.style.borderLeftColor = borderColor;
-            #endregion
+            RegisterCallback<GeometryChangedEvent>(CreateMinimap);
 
             RegisterCallback<ValidateCommandEvent>(OnValidateCommand);
             RegisterCallback<MouseMoveEvent>(OnMouseMoveEvent);
@@ -118,11 +97,76 @@ namespace Gork.Editor
             SearchWindow.Open(new SearchWindowContext(context.screenMousePosition), _searchWindow);
         }
 
+        private void CreateMinimap(GeometryChangedEvent evt)
+        {
+            _miniMap = new GorkMiniMap()
+            {
+                anchored = GorkEditorSaveData.MinimapAnchored,
+                visible = GorkEditorSaveData.DisplayMinimap,
+                GraphView = this,
+            };
+
+            _miniMap.UpdateLabelColor();
+            _miniMap.OnChangeAnchorState += ModifyMinimapAnchoredState;
+
+            _miniMap.OnChangePosition += rect => ModifyMinimapPos(_miniMap);
+
+            Add(_miniMap);
+
+            UnregisterCallback<GeometryChangedEvent>(CreateMinimap);
+        }
+
         public void ToggleMiniMap()
         {
-            _miniMap.visible = !_miniMap.visible;
+            GorkEditorSaveData.DisplayMinimap = !_miniMap.visible;
+            GorkGraphEditor.UpdateAllMinimaps?.Invoke();
+        }
 
-            GorkEditorSaveData.DisplayMinimap = _miniMap.visible;
+        public void ModifyMinimapPos(GorkMiniMap map)
+        {
+            if (map.parent == null)
+            {
+                return;
+            }
+
+            GorkEditorSaveData.MinimapPosition = map.GetSavePosition();  //map.ToSavePosition();
+
+            GorkGraphEditor.UpdateAllMinimaps?.Invoke();
+        }
+
+        public void ModifyMinimapAnchoredState(bool anchored)
+        {
+            GorkEditorSaveData.MinimapAnchored = anchored;
+
+            GorkGraphEditor.UpdateAllMinimaps?.Invoke();
+        }
+
+        /// <summary>
+        /// Called on every single Graph View whenever any minimap data in the <see cref="GorkEditorSaveData"/> class is changed.
+        /// </summary>
+        public void UpdateMinimap()
+        {
+            if (_miniMap == null)
+            {
+                return;
+            }
+
+            _miniMap.visible = GorkEditorSaveData.DisplayMinimap;
+            _miniMap.anchored = GorkEditorSaveData.MinimapAnchored;
+            _miniMap.UpdateLabelColor();
+
+            if (_miniMap.parent != null)
+            {
+                try
+                {
+                    _miniMap.LoadSaveData();
+                }
+                catch (Exception)
+                {
+
+                }
+            }
+
         }
 
         private void OnValidateCommand(ValidateCommandEvent evt)
@@ -218,6 +262,13 @@ namespace Gork.Editor
             isReframable = true;
         }
 
+        public override void Blur()
+        {
+            base.Blur();
+
+            isReframable = false;
+        }
+
         private void TryAddPasteDataToClipboard(PasteData data)
         {
             if (data != null)
@@ -279,14 +330,14 @@ namespace Gork.Editor
         /// <summary>
         /// Removes all previous elements and opens a new <see cref="GorkGraph"/> to edit.
         /// </summary>
-        public void OpenGraph(GorkGraph graph, bool frameAll = false)
+        public void OpenGraph(GorkGraph graph, bool doFrameAll = false)
         {
             OnOpenGraph?.Invoke(graph);
 
             // Set the graph variable
             Graph = graph;
 
-            SaveCurrentlyEditingGraph();
+            //SaveCurrentlyEditingGraph();
 
             RemoveAllElements();
 
@@ -380,21 +431,15 @@ namespace Gork.Editor
 
                 group.Enabled = true;
             });
-
-            // Update scroll position and zoom scale
-            if (frameAll)
+            
+            if (doFrameAll)
             {
                 CustomFrameAll();
-            }
-            else
-            {
-                LoadScrollAndZoomData();
             }
         }
 
         /// <summary>
-        /// A custom FrameAll() that's different from <see cref="GraphView.FrameAll"/> by recursively calling itself every frame until it succeeds. <para/>
-        /// It also saves it's result to the <see cref="GorkEditorSaveData"/> class upon success.
+        /// A custom FrameAll() that's different from <see cref="GraphView.FrameAll"/> by recursively calling itself every frame until it succeeds.
         /// </summary>
         private void CustomFrameAll()
         {
@@ -403,7 +448,7 @@ namespace Gork.Editor
                 // Unsubscribe this method from the call
                 EditorApplication.delayCall -= Delay;
                 
-                // Woah recursion
+                // Woah recursion (which means that this will try and try again until it works)
                 CustomFrameAll();
             }
 
@@ -425,8 +470,6 @@ namespace Gork.Editor
             viewTransform.position = frameTranslation;
 
             viewTransform.scale = frameScaling;
-
-            SaveScrollAndZoomData();
         }
 
         /// <summary>
@@ -565,7 +608,44 @@ namespace Gork.Editor
             return change;
         }
 
-        #region Saving And Loading Data
+        public Vector2 ScrollPosition
+        {
+            get => viewTransform.position;
+            set
+            {
+                viewTransform.position = value;
+            }
+        }
+        public float ZoomScale
+        {
+            get => (viewTransform.scale.x + viewTransform.scale.y) / 2;
+            set
+            {
+                viewTransform.scale = new Vector3(value, value, 1);
+            }
+        }
+
+        // @HERE REMOVE!!!
+        /*
+        public Rect MinimapRect
+        {
+            get => _miniMap.GetPosition();
+            set
+            {
+                _miniMap.SetPosition(value);
+            }
+        }
+        public bool MinimapAnchored
+        { 
+            get => _miniMap.anchored;
+            set
+            {
+                _miniMap.anchored = value;
+            }
+        }
+        */
+
+        /*
         public void SaveScrollAndZoomData()
         {
             GorkEditorSaveData.ScrollPosition = viewTransform.position;
@@ -597,7 +677,7 @@ namespace Gork.Editor
             float zoomScale = GorkEditorSaveData.ZoomScale;
             viewTransform.scale = new Vector3(zoomScale, zoomScale, 1);
         }
-        #endregion
+        */
 
         public override void BuildContextualMenu(ContextualMenuPopulateEvent evt)
         {

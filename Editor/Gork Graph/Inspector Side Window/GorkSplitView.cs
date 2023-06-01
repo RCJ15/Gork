@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
+using UnityEditor;
 using UnityEngine.UIElements;
 using UnityEditor.UIElements;
 using UnityEditor.Experimental.GraphView;
@@ -18,11 +19,15 @@ namespace Gork.Editor
 
         private static readonly FieldInfo _draglineField = typeof(TwoPaneSplitView).GetField("m_DragLineAnchor", BindingFlags.NonPublic | BindingFlags.Instance);
 
+        public GorkGraphView GraphView { get; set; }
+
         private ToolbarButton _resetButton;
         private ToolbarButton _collapseButton;
         private ToolbarButton _expandButton;
 
         private VisualElement _dragline;
+
+        private float _actualSize;
 
         public float StartSize { get; set; }
 
@@ -33,11 +38,8 @@ namespace Gork.Editor
             RegisterCallback<GeometryChangedEvent>(Init);
         }
 
-        private bool _isMinimized;
-        private bool _isMaximized;
-
-        public bool IsMinimized => _isMinimized;
-        public bool IsMaximized => _isMaximized;
+        public bool IsMinimized { get; set; }
+        public bool IsMaximized { get; set; }
 
         private void Init(GeometryChangedEvent evt)
         {
@@ -48,48 +50,68 @@ namespace Gork.Editor
             _resetButton.clicked += ResetSize;
             _collapseButton.clicked += () =>
             {
-                if (_isMinimized)
+                if (IsMinimized)
                 {
                     return;
                 }
 
-                if (_isMaximized)
+                if (IsMaximized)
                 {
-                    ResetCollapse(GorkEditorSaveData.InspectorWidth);
+                    ResetCollapse(GorkEditorSaveData.SplitViewWidth);
                 }
                 else
                 {
                     CollapseChild(0);
 
-                    _isMinimized = true;
+                    IsMinimized = true;
                 }
             };
 
             _expandButton.clicked += () =>
             {
-                if (_isMaximized)
+                if (IsMaximized)
                 {
                     return;
                 }
 
-                if (_isMinimized)
+                if (IsMinimized)
                 {
-                    ResetCollapse(GorkEditorSaveData.InspectorWidth);
+                    ResetCollapse(GorkEditorSaveData.SplitViewWidth);
                 }
                 else
                 {
                     CollapseChild(1);
 
-                    _isMaximized = true;
+                    IsMaximized = true;
                 }
             };
+
+            EditorApplication.delayCall += LoadMinimizedOrMaximized;
 
             UnregisterCallback<GeometryChangedEvent>(Init);
         }
 
+        private void LoadMinimizedOrMaximized()
+        {
+            if (IsMinimized)
+            {
+                CollapseChild(0);
+
+                IsMaximized = false;
+            }
+            else if (IsMaximized)
+            {
+                CollapseChild(1);
+
+                IsMinimized = false;
+            }
+
+            EditorApplication.delayCall -= LoadMinimizedOrMaximized;
+        }
+
         private void ResetSize()
         {
-            if (_isMaximized || _isMinimized)
+            if (IsMaximized || IsMinimized)
             {
                 ResetCollapse(StartSize);
                 return;
@@ -104,12 +126,23 @@ namespace Gork.Editor
 
             SetSize(size);
 
-            _isMaximized = false;
-            _isMinimized = false;
+            IsMaximized = false;
+            IsMinimized = false;
         }
 
         public void SetSize(float size)
         {
+            if (fixedPane == null || flexedPane == null || _dragline == null)
+            {
+                return;
+            }
+
+            _actualSize = size;
+
+            float maxSize = contentRect.size.x - flexedPane.resolvedStyle.minWidth.value;
+
+            size = Mathf.Clamp(size, fixedPane.resolvedStyle.minWidth.value, maxSize);
+
             StyleLength newWidth = fixedPane.style.width;
 
             newWidth.value = size;

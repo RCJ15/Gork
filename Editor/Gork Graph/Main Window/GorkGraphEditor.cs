@@ -14,6 +14,8 @@ namespace Gork.Editor
     /// </summary>
     public class GorkGraphEditor : EditorWindow
     {
+        public const string DEFAULT_WINDOW_NAME = "Gork Graph Editor";
+
         #region GetPath
         private static string _path = null;
         public static string GorkPath
@@ -60,15 +62,34 @@ namespace Gork.Editor
         }
         #endregion
 
+        public static Action UpdateAllMinimaps;
+        public static Action<float> UpdateAllSplitWidth;
+
         private VisualElement _parent;
         private Label _noGraphText;
 
         private Label _currentlyEditingText;
         private string _currentlyEditingDefaultText;
 
-        private GorkGraph _graph;
+        [SerializeField] private Vector2 scrollPosition;
+        [SerializeField] private float zoomScale;
+
+        [SerializeField] private bool splitViewMinimized;
+        [SerializeField] private bool splitViewMaximized;
+
+        [SerializeField] private GorkInspectorView.InspectorMode inspectorMode;
+
+        [SerializeField] private GorkGraph graph;
         private GorkGraphView _graphView;
         private GorkInspectorView _inspectorView;
+        private GorkSplitView _splitView;
+
+        #region Minimap Button
+        private ToolbarButton _toggleMinimapButton;
+        private VisualElement _minimapOpenIcon;
+        private VisualElement _minimapClosedIcon;
+        private VisualElement _minimapHighlight;
+        #endregion
 
         private static VisualTreeAsset _gorkGraphViewVisualTree = null;
         private static StyleSheet _gorkGraphViewStyleSheet = null;
@@ -76,17 +97,58 @@ namespace Gork.Editor
         // Getting current open file path in the project window using System.Reflection
         private MethodInfo _getFolderPath = typeof(ProjectWindowUtil).GetMethod("GetActiveFolderPath", BindingFlags.Static | BindingFlags.NonPublic);
 
+        private static Texture2D _windowIcon;
+        public static Texture2D WindowIcon
+        {
+            get
+            {
+                if (_windowIcon == null)
+                {
+                    _windowIcon = Resources.Load<Texture2D>("Gork Textures/gork_window_icon");
+                }
+
+                return _windowIcon;
+            }
+        }
+
         [MenuItem("Window/Gork Graph Editor")]
         public static GorkGraphEditor Open()
         {
-            GorkGraphEditor window = GetWindow<GorkGraphEditor>();
-            window.titleContent = new GUIContent("Gork Graph Editor");
+            // Loop through every window open and find the window that already has our graph (or none at all)
+            foreach (GorkGraphEditor editorWindow in Resources.FindObjectsOfTypeAll<GorkGraphEditor>())
+            {
+                if (editorWindow.graph == null)
+                {
+                    editorWindow.Focus();
+                    return editorWindow;
+                }
+            }
+
+            GorkGraphEditor window = CreateInstance<GorkGraphEditor>();
+            window.titleContent = new GUIContent(DEFAULT_WINDOW_NAME, WindowIcon);
+            window.Show();
 
             return window;
         }
 
         public static void Open(GorkGraph graph)
         {
+            // Loop through every window open and find the window that already has our graph (or none at all)
+            foreach (GorkGraphEditor editorWindow in Resources.FindObjectsOfTypeAll<GorkGraphEditor>())
+            {
+                if (editorWindow.graph == graph)
+                {
+                    editorWindow.Focus();
+                    return;
+                }
+                else if (editorWindow.graph == null)
+                {
+                    editorWindow.Focus();
+                    editorWindow.OpenGraph(graph, true);
+                    return;
+                }
+            }
+
             GorkGraphEditor window = Open();
             //window.titleContent.text = graph.name;
             window.OpenGraph(graph, true);
@@ -96,6 +158,9 @@ namespace Gork.Editor
         {
             // Each editor window contains a root VisualElement object
             VisualElement root = rootVisualElement;
+
+            root.RegisterCallback<DragEnterEvent>(DragAndDropEnter);
+            root.RegisterCallback<DragExitedEvent>(DragAndDropExited);
 
             // Import UXML
             if (_gorkGraphViewVisualTree == null)
@@ -110,9 +175,8 @@ namespace Gork.Editor
             }
             root.styleSheets.Add(_gorkGraphViewStyleSheet);
 
-            // Get our components
+            // Get the graph view
             _graphView = root.Q<GorkGraphView>();
-            Undo.undoRedoPerformed += _graphView.OnUndoRedo;
 
             #region Toolbar Buttons
             // Ping object
@@ -195,30 +259,22 @@ namespace Gork.Editor
                 GorkWikiWindow.Open();
             };
 
-            ToolbarButton toggleMinimap = root.Q<ToolbarButton>("ToggleMinimap");
-            VisualElement minimapOpenIcon = toggleMinimap.Q<VisualElement>("OpenImage");
-            VisualElement minimapClosedIcon = toggleMinimap.Q<VisualElement>("ClosedImage");
-            VisualElement minimapHighlight = toggleMinimap.Q<VisualElement>("Highlight");
+            _toggleMinimapButton = root.Q<ToolbarButton>("ToggleMinimap");
+            _minimapOpenIcon = _toggleMinimapButton.Q<VisualElement>("OpenImage");
+            _minimapClosedIcon = _toggleMinimapButton.Q<VisualElement>("ClosedImage");
+            _minimapHighlight = _toggleMinimapButton.Q<VisualElement>("Highlight");
 
-            UpdateMinimapButtonState();
+            void UpdateMinimapButtonStateLocal(GeometryChangedEvent evt)
+            {
+                UpdateMinimapButtonState();
+
+                _graphView.UnregisterCallback<GeometryChangedEvent>(UpdateMinimapButtonStateLocal);
+            }
+
+            _graphView.RegisterCallback<GeometryChangedEvent>(UpdateMinimapButtonStateLocal);
 
             // Toggle Minimap
-            toggleMinimap.clicked += () =>
-            {
-                _graphView.ToggleMiniMap();
-
-                UpdateMinimapButtonState();
-            };
-
-            void UpdateMinimapButtonState()
-            {
-                bool minimapVisible = _graphView.MiniMap.visible;
-
-                minimapOpenIcon.visible = minimapVisible;
-                minimapClosedIcon.visible = !minimapVisible;
-
-                minimapHighlight.visible = minimapVisible;
-            }
+            _toggleMinimapButton.clicked += _graphView.ToggleMiniMap;
             #endregion
 
             #region No Graph State
@@ -280,30 +336,40 @@ namespace Gork.Editor
             #endregion
 
             #region Split View
-            GorkSplitView splitView = root.Q<GorkSplitView>();
-            splitView.StartSize = splitView.fixedPaneInitialDimension;
-            splitView.fixedPaneInitialDimension = GorkEditorSaveData.InspectorWidth;
+            _splitView = root.Q<GorkSplitView>();
 
-            // Extremely odd method for saving the inspector width value, but it works so...
+            _splitView.IsMinimized = splitViewMinimized;
+            _splitView.IsMaximized = splitViewMaximized;
+
+            _splitView.StartSize = _splitView.fixedPaneInitialDimension;
+            _splitView.fixedPaneInitialDimension = GorkEditorSaveData.SplitViewWidth;
+
+            UpdateAllSplitWidth += _splitView.SetSize;
+            UpdateAllSplitWidth += UpdateMinimapsOnChangeSplitWidth;
+
+            // Extremely odd method for saving the split view width, but it works so...
             void SplitViewStartSaving(GeometryChangedEvent evt)
             {
-                splitView.fixedPane.generateVisualContent += _ =>
+                _splitView.fixedPane.generateVisualContent += _ =>
                 {
-                    if (splitView.IsMinimized || splitView.IsMaximized)
+                    if (_splitView.IsMinimized || _splitView.IsMaximized)
                     {
                         return;
                     }
 
-                    GorkEditorSaveData.InspectorWidth = splitView.fixedPane.style.width.value.value;
+                    GorkEditorSaveData.SplitViewWidth = _splitView.fixedPane.style.width.value.value;
+                    UpdateAllSplitWidth?.Invoke(GorkEditorSaveData.SplitViewWidth);
                 };
 
-                splitView.UnregisterCallback<GeometryChangedEvent>(SplitViewStartSaving);
+                _splitView.UnregisterCallback<GeometryChangedEvent>(SplitViewStartSaving);
             }
-            splitView.RegisterCallback<GeometryChangedEvent>(SplitViewStartSaving);
+            _splitView.RegisterCallback<GeometryChangedEvent>(SplitViewStartSaving);
             #endregion
 
             _inspectorView = root.Q<GorkInspectorView>();
-            Undo.undoRedoPerformed += _inspectorView.OnUndoRedo;
+
+            _inspectorView.Mode = inspectorMode;
+            _inspectorView.OnChangeInspectorMode += mode => inspectorMode = mode;
 
             _inspectorView.Initialize(root);
             _inspectorView.GraphView = _graphView;
@@ -313,54 +379,80 @@ namespace Gork.Editor
             _currentlyEditingText = root.Q<Label>("CurrentlyEditingText");
             _currentlyEditingDefaultText = _currentlyEditingText.text;
 
-            _graphView.LoadScrollAndZoomData();
-
             // Set visual element references on the Graph View
             _graphView.Inspector = _inspectorView;
 
-            #region Load Currently Edited Graph
-            // Don't load if the graph view somehow already has a loaded graph
-            if (_graphView.Graph != null)
-            {
-                return;
-            }
+            Undo.undoRedoPerformed += _inspectorView.OnUndoRedo;
+            Undo.undoRedoPerformed += _graphView.OnUndoRedo;
 
-            string currentlyEditingGraph = GorkEditorSaveData.CurrentlyEditingGraph;
+            // Subscribe the update minimap event
+            UpdateAllMinimaps += _graphView.UpdateMinimap;
+            UpdateAllMinimaps += UpdateMinimapButtonState;
 
-            if (string.IsNullOrEmpty(currentlyEditingGraph))
-            {
-                return;
-            }
-
-            // Load asset
-            GorkGraph graph = AssetDatabase.LoadMainAssetAtPath(AssetDatabase.GUIDToAssetPath(currentlyEditingGraph)) as GorkGraph;
-            
-            // Check if the asset load has failed
             if (graph == null)
             {
+                _noGraphText.visible = true;
                 return;
             }
 
-            // Open graph
             OpenGraph(graph, false);
-            #endregion
+
+            _graphView.ScrollPosition = scrollPosition;
+            _graphView.ZoomScale = zoomScale;
         }
 
-        private void OnDestroy()
+        private void OnDisable()
         {
-            if (_inspectorView != null)
+            Undo.undoRedoPerformed -= _inspectorView.OnUndoRedo;
+            Undo.undoRedoPerformed -= _graphView.OnUndoRedo;
+
+            UpdateAllSplitWidth -= _splitView.SetSize;
+            UpdateAllSplitWidth -= UpdateMinimapsOnChangeSplitWidth;
+
+            // Unsubscribe the update minimap event
+            UpdateAllMinimaps -= _graphView.UpdateMinimap;
+            UpdateAllMinimaps -= UpdateMinimapButtonState;
+            
+            scrollPosition = _graphView.ScrollPosition;
+            zoomScale = _graphView.ZoomScale;
+            
+            splitViewMinimized = _splitView.IsMinimized;
+            splitViewMaximized = _splitView.IsMaximized;
+        }
+
+        private void UpdateMinimapsOnChangeSplitWidth(float width)
+        {
+            UpdateAllMinimaps?.Invoke();
+        }
+
+        private void DragAndDropEnter(DragEnterEvent evt)
+        {
+
+        }
+
+        private void DragAndDropExited(DragExitedEvent evt)
+        {
+            
+        }
+
+        private void DragAndDropPerform(DragPerformEvent evt)
+        {
+
+        }
+
+        private void UpdateMinimapButtonState()
+        {
+            if (_graphView.MiniMap == null)
             {
-                Undo.undoRedoPerformed -= _inspectorView.OnUndoRedo;
+                return;
             }
 
-            if (_graphView != null)
-            {
-                Undo.undoRedoPerformed -= _graphView.OnUndoRedo;
+            bool minimapVisible = _graphView.MiniMap.visible;
 
-                _graphView.SaveScrollAndZoomData();
-                _graphView.SaveMinimapData();
-                _graphView.SaveCurrentlyEditingGraph();
-            }
+            _minimapOpenIcon.visible = minimapVisible;
+            _minimapClosedIcon.visible = !minimapVisible;
+
+            _minimapHighlight.visible = minimapVisible;
         }
 
         private void OpenExisting()
@@ -416,23 +508,38 @@ namespace Gork.Editor
                     return;
                 }
 
-                OpenGraph(graph, true);
-
                 // Update selection
                 Selection.objects = new UnityEngine.Object[] { graph };
+
+                // Loop through every window open and find the window that already has our graph (or none at all)
+                foreach (GorkGraphEditor editorWindow in Resources.FindObjectsOfTypeAll<GorkGraphEditor>())
+                {
+                    if (editorWindow.graph == graph)
+                    {
+                        editorWindow.Focus();
+                        Debug.LogWarning("This graph is already open in another window! Only one window can have the graph open at a time.");
+                        return;
+                    }
+                }
+
+                OpenGraph(graph, true);
             };
 
             SearchWindow.Open(new SearchWindowContext(GUIUtility.GUIToScreenPoint(Event.current.mousePosition)), window);
         }
 
-        private void OpenGraph(GorkGraph graph, bool frameAllGraphElements)
+        private void OpenGraph(GorkGraph graph, bool doFrameAll)
         {
             if (graph == null)
             {
                 return;
             }
 
-            _graphView.OpenGraph(graph, frameAllGraphElements);
+            titleContent.text = graph.name;
+            
+            this.graph = graph;
+
+            _graphView.OpenGraph(graph, doFrameAll);
 
             _currentlyEditingText.text = $"Currently Editing: {graph.name}";
 
@@ -441,8 +548,8 @@ namespace Gork.Editor
             {
                 _parent.SetEnabled(true);
 
-                // Also remove the no graph text (which is the parent to the "Create New" & "Open Existing" buttons)
-                rootVisualElement.Remove(_noGraphText);
+                // Also hide the no graph text (which is the parent to the "Create New" & "Open Existing" buttons)
+                _noGraphText.visible = false;
             }
         }
 
@@ -459,7 +566,9 @@ namespace Gork.Editor
 
             _parent.SetEnabled(false);
 
-            rootVisualElement.Add(_noGraphText);
+            _noGraphText.visible = true;
+
+            titleContent.text = DEFAULT_WINDOW_NAME;
         }
     }
 }

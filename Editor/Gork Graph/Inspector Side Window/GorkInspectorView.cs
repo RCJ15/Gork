@@ -16,16 +16,17 @@ namespace Gork.Editor
     {
         private GenericMenu _createParameterMenu, _createEventMenu = null;
 
-        private ModeEnum _mode;
-        private ModeEnum mode
+        private InspectorMode _mode;
+        public InspectorMode Mode
         {
             get => _mode;
             set
             {
                 _mode = value;
-                GorkEditorSaveData.CurrentInspectorMode = (int)_mode;
+                OnChangeInspectorMode?.Invoke(_mode);
             }
         }
+        public Action<InspectorMode> OnChangeInspectorMode;
 
         private string _searchFilterString = "";
         private Type _parametersSearchFilter = null;
@@ -242,12 +243,9 @@ namespace Gork.Editor
 
         public GorkInspectorView()
         {
-            _mode = (ModeEnum)GorkEditorSaveData.CurrentInspectorMode;
-
             RegisterCallback<MouseUpEvent>(HandleRightClick);
 
             RegisterCallback<FocusInEvent>(OnFocusIn);
-            //RegisterCallback<FocusOutEvent>(OnFocusOut);
         }
 
         public void OnOpenGraph(GorkGraph graph)
@@ -260,6 +258,10 @@ namespace Gork.Editor
             _cachedEventsList = null;
         }
 
+        /// <summary>
+        /// Handles what happens when right click is pressed on the inspector. <para/>
+        /// Is only used to detect if we should open a context menu on the item the cursor is on top of.
+        /// </summary>
         private void HandleRightClick(MouseUpEvent evt)
         {
             // Return if this is not a right click or if the GraphSerializedObject is null
@@ -273,7 +275,7 @@ namespace Gork.Editor
             Action<int> duplicateElement;
             Action<int> removeElement; 
 
-            switch (mode)
+            switch (Mode)
             {
                 default:
                     prop = ParametersList.serializedProperty;
@@ -282,14 +284,14 @@ namespace Gork.Editor
                     removeElement = RemoveParameter;
                     break;
 
-                case ModeEnum.Tags:
+                case InspectorMode.Tags:
                     prop = TagsList.serializedProperty;
 
                     duplicateElement = DuplicateTag;
                     removeElement = RemoveTag;
                     break;
 
-                case ModeEnum.Events:
+                case InspectorMode.Events:
                     prop = EventsList.serializedProperty;
 
                     duplicateElement = DuplicateEvent;
@@ -360,41 +362,41 @@ namespace Gork.Editor
 
             switch (_mode)
             {
-                case ModeEnum.Parameters:
+                case InspectorMode.Parameters:
                     ParametersButtonColorChange();
                     break;
-                case ModeEnum.Tags:
+                case InspectorMode.Tags:
                     TagsButtonColorChange();
                     break;
-                case ModeEnum.Events:
+                case InspectorMode.Events:
                     EventsButtonColorChange();
                     break;
             }
 
             parameterButton.clicked += () =>
             {
-                if (mode == ModeEnum.Parameters)
+                if (Mode == InspectorMode.Parameters)
                 {
                     return;
                 }
 
                 ParametersButtonColorChange();
 
-                mode = ModeEnum.Parameters;
+                Mode = InspectorMode.Parameters;
 
                 UpdateParametersSearchList();
             };
 
             tagsButton.clicked += () =>
             {
-                if (mode == ModeEnum.Tags)
+                if (Mode == InspectorMode.Tags)
                 {
                     return;
                 }
 
                 TagsButtonColorChange();
 
-                mode = ModeEnum.Tags;
+                Mode = InspectorMode.Tags;
 
                 _parametersSearchFilter = null;
                 UpdateTagsSearchList();
@@ -402,14 +404,14 @@ namespace Gork.Editor
 
             eventsButton.clicked += () =>
             {
-                if (mode == ModeEnum.Events)
+                if (Mode == InspectorMode.Events)
                 {
                     return;
                 }
 
                 EventsButtonColorChange();
 
-                mode = ModeEnum.Events;
+                Mode = InspectorMode.Events;
 
                 _parametersSearchFilter = null;
             };
@@ -418,6 +420,8 @@ namespace Gork.Editor
 
             addButton.clicked += () =>
             {
+                OnFocusIn(null);
+
                 #region Create Parameters Menu
                 // Create and cache the create parameter menu if it's null
                 if (_createParameterMenu == null)
@@ -467,17 +471,17 @@ namespace Gork.Editor
                 Rect addButtonRect = new Rect(addButton.LocalToWorld(Vector2.zero), addButton.contentRect.size * 1.5f);
 
                 // Spawn the correct dropdown based on which mode is currently active
-                switch (mode)
+                switch (Mode)
                 {
-                    case ModeEnum.Parameters:
+                    case InspectorMode.Parameters:
                         _createParameterMenu.DropDown(addButtonRect);
                         break;
 
-                    case ModeEnum.Tags:
+                    case InspectorMode.Tags:
                         AddTagToGraph("New Tag");
                         break;
 
-                    case ModeEnum.Events:
+                    case InspectorMode.Events:
                         _createEventMenu.DropDown(addButtonRect);
                         break;
                 }
@@ -496,17 +500,17 @@ namespace Gork.Editor
                 // Filter!
                 _searchFilterString = text.newValue;
 
-                switch (mode)
+                switch (Mode)
                 {
-                    case ModeEnum.Parameters:
+                    case InspectorMode.Parameters:
                         UpdateParametersSearchList();
                         break;
 
-                    case ModeEnum.Tags:
+                    case InspectorMode.Tags:
                         UpdateTagsSearchList();
                         break;
 
-                    case ModeEnum.Events:
+                    case InspectorMode.Events:
                         UpdateEventsSearchList();
                         break;
                 }
@@ -519,9 +523,9 @@ namespace Gork.Editor
 
                 // Spawn the correct dropdown based on which mode is currently active
                 // These menus can't be cached since the entries in the menus will display if they are selected or not which can't be edited once the menu is created (stupid Unity thing)
-                switch (mode)
+                switch (Mode)
                 {
-                    case ModeEnum.Parameters:
+                    case InspectorMode.Parameters:
                         #region Create Filter Parameters Menu
                         // Create the filter parameters menu
                         GenericMenu filterParametersMenu = new GenericMenu();
@@ -557,7 +561,7 @@ namespace Gork.Editor
                         filterParametersMenu.DropDown(searchFieldButtonRect);
                         break;
 
-                    case ModeEnum.Events:
+                    case InspectorMode.Events:
 
                         #region Filter Events Menu
                         // Create the filter events menu
@@ -595,7 +599,13 @@ namespace Gork.Editor
             }
 
             GraphView.Blur();
-            GraphView.isReframable = false;
+        }
+
+        public override void Blur()
+        {
+            base.Blur();
+
+            _imguiContainer.Blur();
         }
 
         public void OnUndoRedo()
@@ -623,19 +633,19 @@ namespace Gork.Editor
             ReorderableList list;
             ReorderableList searchList;
 
-            switch (mode)
+            switch (Mode)
             {
                 default:
                     list = ParametersList;
                     searchList = ParametersSearchList;
                     break;
 
-                case ModeEnum.Tags:
+                case InspectorMode.Tags:
                     list = TagsList;
                     searchList = TagsSearchList;
                     break;
 
-                case ModeEnum.Events:
+                case InspectorMode.Events:
                     list = EventsList;
                     searchList = EventsSearchList;
                     break;
@@ -645,7 +655,7 @@ namespace Gork.Editor
 
             Rect contentRect = _imguiContainer.parent.contentRect;
 
-            bool displaySearchBar = (mode == ModeEnum.Parameters && _parametersSearchFilter != null) || (mode == ModeEnum.Events && _eventsSearchFilter.HasValue) || !string.IsNullOrEmpty(_searchFilterString);
+            bool displaySearchBar = (Mode == InspectorMode.Parameters && _parametersSearchFilter != null) || (Mode == InspectorMode.Events && _eventsSearchFilter.HasValue) || !string.IsNullOrEmpty(_searchFilterString);
 
             // Position list so the remove button isn't shown as it looks pretty ugly
             Rect rect = EditorGUILayout.GetControlRect();
@@ -1476,7 +1486,7 @@ namespace Gork.Editor
 
         #endregion
 
-        private enum ModeEnum
+        public enum InspectorMode
         {
             Parameters,
             Tags,

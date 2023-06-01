@@ -15,7 +15,7 @@
                 <uie:ToolbarButton text="Open Wiki" display-tooltip-when-elided="true" focusable="false" name="OpenWiki" tooltip="Opens the Gork Graph wiki window." style="overflow: hidden; -unity-text-align: middle-center; left: auto; margin-right: 5px; margin-left: 5px;" />
             </ui:VisualElement>
         </uie:Toolbar>
-        <Gork.Editor.GorkSplitView fixed-pane-initial-dimension="200" orientation="Horizontal">
+        <Gork.Editor.GorkSplitView fixed-pane-initial-dimension="200">
             <ui:VisualElement name="InspectorViewParent" style="min-width: 100px;">
                 <uie:Toolbar name="TopBar" style="border-bottom-width: 2px; background-color: rgb(35, 35, 35);">
                     <uie:ToolbarButton focusable="false" text="+" name="AddButton" tooltip="Add a new element to the current list." display-tooltip-when-elided="true" style="overflow: hidden; -unity-font-style: normal; padding-left: 2px; font-size: 25px; padding-right: 0; padding-top: 0; -unity-text-align: middle-left; padding-bottom: 5px; border-left-width: 0; border-right-width: 2px; justify-content: center; left: 0; min-height: 0; position: absolute; right: auto; bottom: 0; top: 0; width: 40px; min-width: 0;">
@@ -54,7 +54,7 @@
             </ui:VisualElement>
         </Gork.Editor.GorkSplitView>
     </ui:VisualElement>
-    <ui:Label text="No Gork Graph is being edited!" display-tooltip-when-elided="true" name="NoGraphText" style="flex-grow: 1; position: absolute; left: 0; top: 0; right: 0; bottom: 0; -unity-text-align: middle-center; font-size: 30px; color: rgb(255, 255, 255); -unity-font-style: bold; background-color: rgba(0, 0, 0, 0.5); justify-content: center; align-items: center; padding-left: 0; padding-right: 0; padding-top: 0; padding-bottom: 0; flex-direction: row;">
+    <ui:Label text="No Gork Graph is being edited!" display-tooltip-when-elided="true" name="NoGraphText" style="flex-grow: 1; position: absolute; left: 0; top: 0; right: 0; bottom: 0; -unity-text-align: middle-center; font-size: 30px; color: rgb(255, 255, 255); -unity-font-style: bold; background-color: rgba(0, 0, 0, 0.5); justify-content: center; align-items: center; padding-left: 0; padding-right: 0; padding-top: 0; padding-bottom: 0; flex-direction: row; visibility: hidden;">
         <ui:VisualElement name="ButtonsParent" style="position: relative; left: 0; right: 0; bottom: 0; top: 35px; flex-direction: row; align-items: stretch; justify-content: center; flex-grow: 1;">
             <ui:Button text="Open Existing" display-tooltip-when-elided="true" name="OpenExistingButton" focusable="false" style="width: 25%; height: 30px; font-size: 20px;" />
             <ui:Button text="Create New" display-tooltip-when-elided="true" name="CreateNewButton" focusable="false" style="width: 25%; height: 30px; font-size: 20px; opacity: 1; top: 0; bottom: 0; right: 0; left: 0;" />
