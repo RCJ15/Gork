@@ -16,12 +16,23 @@ namespace Gork.Editor
     {
         private static readonly StringBuilder _stringBuilderCache = new StringBuilder();
 
-        public static readonly GorkWikiPage HomePage = new GorkWikiPage("Home Page", "Home Page", "Welcome to the gork wiki!", 
+        public static readonly GorkWikiPage HomePage =
+            // TODO: FIX GORK WIKI!!!
+            /*
+                new GorkWikiPage("Home Page", "Home Page", "Welcome to the gork wiki!", 
 @"The gork wiki is a special place that will explain any- and everything that GorkGraph has to offer.
 
 Your current GorkGraph version is an early build.
 This means that you may experience more bugs and issues.
 This also means that only the Nodes are documented.",
+        "Official Gork Graph wiki Page");
+            */
+            new GorkWikiPage("Home Page", "Home Page", "Welcome to the gork wiki!",
+@"The gork wiki is a special place that will explain any- and everything that GorkGraph has to offer.
+
+Your current GorkGraph version is an early build.
+This means that you may experience more bugs and issues.
+This also means that nothing has been documented yet, which makes this entire window completely useless...",
         "Official Gork Graph wiki Page");
 
         public string Location = null;
@@ -213,13 +224,15 @@ This also means that only the Nodes are documented.",
         #endregion
 
         #region Node Wiki Pages
-        private static readonly Dictionary<GorkNodeInfoAttribute, GorkWikiPage> _gorkNodePageCache = new Dictionary<GorkNodeInfoAttribute, GorkWikiPage>();
+        private static readonly Dictionary<GorkMenuItemAttribute, GorkWikiPage> _gorkNodePageCache = new Dictionary<GorkMenuItemAttribute, GorkWikiPage>();
 
         /// <summary>
-        /// Reads from a <see cref="GorkNodeInfoAttribute"/> and returns a <see cref="GorkWikiPage"/> from the attributes information.
+        /// Reads from a <see cref="GorkMenuItemAttribute"/> and returns a <see cref="GorkWikiPage"/> from the attributes information.
         /// </summary>
-        public static GorkWikiPage ReadNodeAttribute(GorkNodeInfoAttribute attribute)
+        public static GorkWikiPage ReadNodeAttribute(GorkMenuItemAttribute attribute)
         {
+            return null;
+            /*
             if (_gorkNodePageCache.ContainsKey(attribute))
             {
                 return _gorkNodePageCache[attribute];
@@ -299,7 +312,7 @@ This also means that only the Nodes are documented.",
             }
 
             // Get the attributes reflected type
-            Type attributeType = GorkNodeInfoAttribute.AttributeTypes[attribute];
+            Type attributeType = GorkMenuItemAttribute.AttributeTypes[attribute];
 
             #region Fields
             bool addedFieldsTitle = false;
@@ -471,10 +484,10 @@ This also means that only the Nodes are documented.",
             #region Variants
             bool addedVaraintsTitle = false;
 
-            List<KeyValuePair<string, GorkNodeInfoAttribute>> variants = new List<KeyValuePair<string, GorkNodeInfoAttribute>>();
+            List<KeyValuePair<string, GorkMenuItemAttribute>> variants = new List<KeyValuePair<string, GorkMenuItemAttribute>>();
 
             // Loop through every other GorkNodeInfo attribute that isn't the one we are reading currently
-            foreach (GorkNodeInfoAttribute otherAttribute in GorkNodeInfoAttribute.TypeAttributes[attributeType])
+            foreach (GorkMenuItemAttribute otherAttribute in GorkMenuItemAttribute.TypeAttributes[attributeType])
             {
                 // Ignore the attribute if it's the one we are reading currently
                 if (otherAttribute == attribute)
@@ -511,7 +524,7 @@ This also means that only the Nodes are documented.",
                     otherName = otherName.TrimEnd() + " Node";
                 }
 
-                variants.Add(new KeyValuePair<string, GorkNodeInfoAttribute>(otherName, otherAttribute));
+                variants.Add(new KeyValuePair<string, GorkMenuItemAttribute>(otherName, otherAttribute));
 
                 /*
                 _stringBuilderCache.Append("<b>");
@@ -533,7 +546,6 @@ This also means that only the Nodes are documented.",
                 }
 
                 _stringBuilderCache.AppendLine();
-                */
             } 
             #endregion
 
@@ -568,6 +580,7 @@ This also means that only the Nodes are documented.",
             _gorkNodePageCache[attribute] = page;
 
             return page;
+            */
         }
         #endregion
     }

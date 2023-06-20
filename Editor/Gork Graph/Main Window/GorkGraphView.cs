@@ -6,11 +6,9 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
 using UnityEngine.UIElements;
-using UnityEditor.UIElements;
 using UnityEditor.Experimental.GraphView;
 
 using Object = UnityEngine.Object;
-using UnityEngine.UIElements.Experimental;
 
 namespace Gork.Editor
 {
@@ -44,7 +42,6 @@ namespace Gork.Editor
         public Vector2 LocalToViewPos(Vector2 localPos) => viewTransform.matrix.inverse.MultiplyPoint(localPos);
         #endregion
 
-        public Dictionary<GorkNode, GorkNodeView> SubscribedNodes = new Dictionary<GorkNode, GorkNodeView>();
         public Dictionary<GorkGraph.GroupData, GorkGroup> GorkGroups = new Dictionary<GorkGraph.GroupData, GorkGroup>();
 
         protected override bool canDeleteSelection => false;
@@ -235,6 +232,11 @@ namespace Gork.Editor
                 foreach (GraphElement element in elementsToRemove)
                 {
                     RemoveElement(element);
+
+                    if (element is IDeletionCallback)
+                    {
+                        (element as IDeletionCallback).OnDeletion();
+                    }
                 }
             }
 
@@ -351,7 +353,7 @@ namespace Gork.Editor
                 node.Graph = Graph;
 
                 // Create the node view
-                GorkNodeView nodeView = CreateNodeView(node, node.AttributeID);
+                GorkNodeView nodeView = CreateNodeView(node);
             });
 
             // Create all the edges (connections) by looping through all of the nodes in the graph again
@@ -507,6 +509,11 @@ namespace Gork.Editor
             foreach (GraphElement element in elementsToRemove)
             {
                 RemoveElement(element);
+
+                if (element is IDeletionCallback)
+                {
+                    (element as IDeletionCallback).OnDeletion();
+                }
             }
         }
 
@@ -545,7 +552,7 @@ namespace Gork.Editor
                             Undo.DestroyObjectImmediate(node);
 
                             Type nodeType = node.GetType();
-                            string displayName = nodeView.Attribute == null ? nodeType.Name : nodeView.Attribute.NodeName;
+                            string displayName = nodeView.Attribute == null ? nodeType.Name : nodeView.Attribute.DisplayName;
                             Undo.SetCurrentGroupName($"Deleted \"{displayName}\"");
                         }
                     }
@@ -564,8 +571,9 @@ namespace Gork.Editor
                             childPort.Disconnect(edge);
                             parentPort.Disconnect(edge);
 
-                            // Remove the connection from the Graph
-                            Graph.RemoveConnection(parentPort.Node, parentPort.PortIndex, childPort.Node, childPort.PortIndex);
+                            // Notify the nodes about the removal of the connections
+                            parentPort.NodeEditor.RemoveOutputConnection(parentPort.PortIndex, childPort.Node, childPort.PortIndex);
+                            childPort.NodeEditor.RemoveInputConnection(childPort.PortIndex, parentPort.Node, parentPort.PortIndex);
                         }
                     }
 
@@ -600,8 +608,9 @@ namespace Gork.Editor
                     GorkPort childPort = edge.input as GorkPort;
                     GorkPort parentPort = edge.output as GorkPort;
 
-                    // Add the connection to the Graph
-                    Graph.AddConnection(parentPort.Node, parentPort.PortIndex, childPort.Node, childPort.PortIndex);
+                    // Notify the nodes about the new connections
+                    parentPort.NodeEditor.AddOutputConnection(parentPort.PortIndex, childPort.Node, childPort.PortIndex);
+                    childPort.NodeEditor.AddInputConnection(childPort.PortIndex, parentPort.Node, parentPort.PortIndex);
                 });
             }
 
@@ -624,60 +633,6 @@ namespace Gork.Editor
                 viewTransform.scale = new Vector3(value, value, 1);
             }
         }
-
-        // @HERE REMOVE!!!
-        /*
-        public Rect MinimapRect
-        {
-            get => _miniMap.GetPosition();
-            set
-            {
-                _miniMap.SetPosition(value);
-            }
-        }
-        public bool MinimapAnchored
-        { 
-            get => _miniMap.anchored;
-            set
-            {
-                _miniMap.anchored = value;
-            }
-        }
-        */
-
-        /*
-        public void SaveScrollAndZoomData()
-        {
-            GorkEditorSaveData.ScrollPosition = viewTransform.position;
-            GorkEditorSaveData.ZoomScale = (viewTransform.scale.x + viewTransform.scale.y) / 2;
-        }
-
-        public void SaveMinimapData()
-        {
-            GorkEditorSaveData.MinimapRect = _miniMap.GetPosition();
-            GorkEditorSaveData.MinimapAnchored = _miniMap.anchored;
-        }
-
-        public void SaveCurrentlyEditingGraph()
-        {
-            if (Graph == null)
-            {
-                GorkEditorSaveData.CurrentlyEditingGraph = "";
-                return;
-            }
-
-            GorkEditorSaveData.CurrentlyEditingGraph = AssetDatabase.AssetPathToGUID(GraphPath);
-        }
-
-        public void LoadScrollAndZoomData()
-        {
-            // Update scroll position and zoom scale to match save data
-            viewTransform.position = GorkEditorSaveData.ScrollPosition;
-
-            float zoomScale = GorkEditorSaveData.ZoomScale;
-            viewTransform.scale = new Vector3(zoomScale, zoomScale, 1);
-        }
-        */
 
         public override void BuildContextualMenu(ContextualMenuPopulateEvent evt)
         {
@@ -895,10 +850,13 @@ namespace Gork.Editor
 
                 }), !insideGroup ? DropdownMenuAction.Status.Disabled : DropdownMenuAction.Status.Normal);
 
+                // TODO
+                /*
                 if (singleNode)
                 {
                     nodes[0].AddAttributeContextMenu(menu);
                 }
+                */
             }
             // Add options for gork edge
             else if (edges != null)
@@ -917,7 +875,15 @@ namespace Gork.Editor
 
                     graphViewChanged.Invoke(change);
 
-                    groups.ForEach(g => RemoveElement(g));
+                    groups.ForEach(g =>
+                    {
+                        RemoveElement(g);
+
+                        if (g is IDeletionCallback)
+                        {
+                            (g as IDeletionCallback).OnDeletion();
+                        }
+                    });
                 });
             }
 
@@ -1069,7 +1035,7 @@ namespace Gork.Editor
             return compatiblePorts;
         }
 
-        public GorkNodeView CreateNode(Type nodeType, Vector2 position, int attributeID = 0, List<GorkNodeView.FieldData> fieldData = null)
+        public GorkNodeView CreateNode(Type nodeType, Vector2 position, List<GorkNodeView.FieldData> fieldData = null)
         {
             if (nodeType == null)
             {
@@ -1079,17 +1045,17 @@ namespace Gork.Editor
             GorkNode node = Graph.CreateNode(nodeType);
             node.Position = position;
 
-            return CreateNodeView(node, attributeID, fieldData);
+            return CreateNodeView(node, fieldData);
         }
 
-        private GorkNodeView CreateNodeView(GorkNode node, int attributeID = 0, List<GorkNodeView.FieldData> fieldData = null)
+        private GorkNodeView CreateNodeView(GorkNode node, List<GorkNodeView.FieldData> fieldData = null)
         {
             if (node == null)
             {
                 return null;
             }
 
-            GorkNodeView nodeView = new GorkNodeView(node, this, attributeID, fieldData);
+            GorkNodeView nodeView = new GorkNodeView(node, this, fieldData);
 
             AddElement(nodeView);
 
@@ -1200,6 +1166,11 @@ namespace Gork.Editor
             foreach (GraphElement element in elementsToRemove)
             {
                 RemoveElement(element);
+
+                if (element is IDeletionCallback)
+                {
+                    (element as IDeletionCallback).OnDeletion();
+                }
             }
 
             // Set undo group name
@@ -1247,7 +1218,7 @@ namespace Gork.Editor
                 }
 
                 // Create a new node
-                GorkNodeView nodeView = CreateNode(nodeType, nodeData.Position, nodeData.AttributeID, nodeData.FieldData);
+                GorkNodeView nodeView = CreateNode(nodeType, nodeData.Position, nodeData.FieldData);
                 //nodeView.LoadFromFieldData(nodeData.FieldData);
 
                 nodes.Add(nodeView);

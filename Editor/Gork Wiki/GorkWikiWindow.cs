@@ -81,7 +81,7 @@ namespace Gork.Editor
             Open(GorkWikiPage.ReadGWPFile(gwpFilePath));
         }
 
-        public static void OpenNodePage(GorkNodeInfoAttribute attribute)
+        public static void OpenNodePage(GorkMenuItemAttribute attribute)
         {
             GorkEditorSaveData.WikiOpenNodePage(attribute);
             Open(GorkWikiPage.ReadNodeAttribute(attribute));

@@ -14,6 +14,10 @@ namespace Gork.Editor
     /// </summary>
     public class GorkInspectorView : VisualElement
     {
+        public Action<Type, string, string> OnRenameParameter;
+        public Action<string, string> OnRenameTag;
+        public Action<GorkGraph.Event.Type, string, string> OnRenameEvent;
+
         private GenericMenu _createParameterMenu, _createEventMenu = null;
 
         private InspectorMode _mode;
@@ -1058,8 +1062,13 @@ namespace Gork.Editor
             // Prevent setting the name to empty strings
             if (!string.IsNullOrEmpty(textValue.Trim()) && textValue != nameProp.stringValue)
             {
+                string oldName = nameProp.stringValue;
+                string newName = GetUniqueParameterName(textValue, index);
+
                 // Also ensure the name is unique
-                nameProp.stringValue = GetUniqueParameterName(textValue, index);
+                nameProp.stringValue = newName;
+
+                OnRenameParameter?.Invoke(type, oldName, newName);
             }
 
             #region Value field
@@ -1277,8 +1286,13 @@ namespace Gork.Editor
             // Prevent setting the name to empty strings
             if (!string.IsNullOrEmpty(textValue.Trim()) && textValue != prop.stringValue)
             {
+                string oldName = prop.stringValue;
+                string newName = GetUniqueTagName(textValue, index);
+
                 // Also ensure the name is unique
-                prop.stringValue = GetUniqueTagName(textValue, index);
+                prop.stringValue = newName;
+
+                OnRenameTag?.Invoke(oldName, newName);
             }
 
             // Focus this text field if it's supposed to be focused
@@ -1438,6 +1452,7 @@ namespace Gork.Editor
             // Set a control so we can force focus on this text field if needed
             GUI.SetNextControlName("TextField");
 
+            GorkGraph.Event.Type eventType = (GorkGraph.Event.Type)prop.FindPropertyRelative("EventType").enumValueIndex;
             SerializedProperty nameProp = prop.FindPropertyRelative("Name");
 
             // Draw the text field
@@ -1446,8 +1461,13 @@ namespace Gork.Editor
             // Prevent setting the name to empty strings
             if (!string.IsNullOrEmpty(textValue.Trim()) && textValue != nameProp.stringValue)
             {
+                string oldName = nameProp.stringValue;
+                string newName = GetUniqueEventName(textValue, index);
+
                 // Also ensure the name is unique
-                nameProp.stringValue = GetUniqueEventName(textValue, index);
+                nameProp.stringValue = newName;
+
+                OnRenameEvent?.Invoke(eventType, oldName, newName);
             }
 
             // Focus this text field if it's supposed to be focused
@@ -1461,7 +1481,6 @@ namespace Gork.Editor
             // Draw colored left side based on the event type
             // External = Purple
             // Internal = Green
-            GorkGraph.Event.Type eventType = (GorkGraph.Event.Type)prop.FindPropertyRelative("EventType").enumValueIndex;
             Color color = _defaultLeftSideColor;
 
             switch (eventType)

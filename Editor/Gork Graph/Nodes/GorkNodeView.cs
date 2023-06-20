@@ -11,28 +11,16 @@ namespace Gork.Editor
     /// <summary>
     /// The class that handles the drawing of every single <see cref="GorkNode"/>.
     /// </summary>
-    public class GorkNodeView : Node
+    public class GorkNodeView : Node, IDeletionCallback
     {
         private static readonly Color InspectorBackgroundColor = new Color(0.159607f, 0.159607f, 0.159607f, 0.7f);
 
-        public GorkNode Node;
-        public GorkGraphView GraphView;
+        public GorkNode Node { get; private set; }
+        public GorkNodeEditor NodeEditor { get; private set; }
+        public GorkGraphView GraphView { get; private set; }
+        public GorkMenuItemAttribute Attribute { get; private set; }
 
         private Type _nodeType;
-
-        //-- Attributes
-        private List<GorkNodeInfoAttribute> _attributeList;
-        private GorkNodeInfoAttribute _attribute;
-        private int _attributeID = 0;
-        private int _attributeCount;
-
-        public GorkNodeInfoAttribute Attribute => _attribute;
-
-        private GorkPortAttribute[] _inputAttributes = null;
-        private GorkPortAttribute[] _outputAttributes = null;
-
-        private bool _noInputPorts;
-        private bool _noOutputPorts;
 
         //-- Ports
         public List<GorkPort> InputPorts = new List<GorkPort>();
@@ -41,7 +29,7 @@ namespace Gork.Editor
         //-- Question Mark Button
         private static VisualTreeAsset _questionMarkButtonVisualTree = null;
         private VisualElement _questionMarkButton;
-        private bool _questionMarkButtonAdded = true;
+        //private bool _questionMarkButtonAdded = true;
 
         private static readonly Color _buttonSelectedColor = new Color(0.168627f, 0.168627f, 0.168627f);
 
@@ -61,7 +49,7 @@ namespace Gork.Editor
         private readonly Dictionary<Label, int> _tagIndices = new Dictionary<Label, int>();
         private readonly Queue<Label> _availableTags = new Queue<Label>();
 
-        public GorkNodeView(GorkNode node, GorkGraphView graphView, int attributeID = 0, List<FieldData> fieldData = null)
+        public GorkNodeView(GorkNode node, GorkGraphView graphView, List<FieldData> fieldData = null)
         {
             // Set data for this node
             Node = node;
@@ -70,6 +58,27 @@ namespace Gork.Editor
 
             // Cache the node type
             _nodeType = Node.GetType();
+
+            Attribute = GorkMenuItemAttribute.TypeAttributes[_nodeType];
+
+            Color? color = Attribute.GetColor();
+
+            if (color.HasValue)
+            {
+                titleContainer.style.backgroundColor = color.Value;
+            }
+
+            // Create and setup the editor for the node
+            NodeEditor = GorkNodeEditor.GetEditor(_nodeType);
+            NodeEditor.Node = node;
+            NodeEditor.Graph = graphView.Graph;
+            NodeEditor.GraphView = graphView;
+            NodeEditor.NodeView = this;
+            NodeEditor.SetTitle(string.IsNullOrEmpty(Node.Title) ? Attribute.DisplayName : Node.Title, false);
+            NodeEditor.SetupEditor();
+            NodeEditor.Subscribe();
+
+            UpdateTitle();
 
             #region Load Visual Tree Assets
             // Question Mark Button
@@ -104,12 +113,15 @@ namespace Gork.Editor
             // Open up the gork wiki when the question mark button is pressed
             _questionMarkButton.AddManipulator(new Clickable(() =>
             {
+                // TODO
+                /*
                 if (_attribute == null || !_attribute.HasWiki)
                 {
                     return;
                 }
 
                 GorkWikiWindow.OpenNodePage(_attribute);
+                */
             }));
 
             // Update the question mark button visually when the mouse enters/leaves the button
@@ -150,54 +162,12 @@ namespace Gork.Editor
             _scrollView.generateVisualContent += _ => UpdateTagSize();
             #endregion
 
-            // Get the GorkNodeInfoAttribute using TryGetValue
-            if (GorkNodeInfoAttribute.TypeAttributes.TryGetValue(_nodeType, out var list))
-            {
-                _attributeList = list;
-                _attributeCount = list.Count;
-            }
-
-            ChangeAttribute(attributeID, false);
-
             // Set our extension container background
             extensionContainer.style.backgroundColor = InspectorBackgroundColor;
 
             UpdatePosition(Node.Position);
 
-            // Get all of the different attributes
-            if (GorkInputPortAttribute.Attributes.TryGetValue(_nodeType, out var inputArray))
-            {
-                _inputAttributes = inputArray;
-            }
-            else
-            {
-                _inputAttributes = GorkInputPortAttribute.TemplatePortArray;
-            }
-
-            if (GorkOutputPortAttribute.Attributes.TryGetValue(_nodeType, out var outputArray))
-            {
-                _outputAttributes = outputArray;
-            }
-            else
-            {
-                _outputAttributes = GorkOutputPortAttribute.TemplatePortArray;
-            }
-
-            _noInputPorts = NoInputPortsAttribute.Attributes.ContainsKey(_nodeType);
-            _noOutputPorts = NoOutputPortsAttribute.Attributes.ContainsKey(_nodeType);
-
-            if (GraphView.SubscribedNodes.TryGetValue(Node, out GorkNodeView nodeView))
-            {
-                Node.UpdateNodeViewCallback -= nodeView.UpdateNodeView;
-            }
-
             BuildNode();
-
-            Node.UpdateNodeViewCallback += UpdateNodeView;
-            GraphView.SubscribedNodes[Node] = this;
-
-            Node.Title = title;
-            Node.NodeView = this;
 
             if (fieldData != null)
             {
@@ -224,37 +194,29 @@ namespace Gork.Editor
 
         private void BuildNode()
         {
+            Node.RefreshPorts();
+
             // Create the needed ports
             InputPorts.Clear();
-            if (!_noInputPorts)
-            {
-                Node.InputPorts.Clear();
 
-                foreach (GorkInputPortAttribute inputAttribute in _inputAttributes)
-                {
-                    AddInputPort(inputAttribute.PortName, inputAttribute.PortType);
-                    Node.InputPorts.Add(new GorkNode.Port(inputAttribute.PortName, inputAttribute.PortType));
-                }
+            foreach (NodePort inputPort in Node.InputPorts)
+            {
+                AddInputPort(inputPort.Name, inputPort.Type);
             }
 
             OutputPorts.Clear();
-            if (!_noOutputPorts)
-            {
-                Node.OutputPorts.Clear();
 
-                foreach (GorkOutputPortAttribute outputAttribute in _outputAttributes)
-                {
-                    AddOutputPort(outputAttribute.PortName, outputAttribute.PortType);
-                    Node.OutputPorts.Add(new GorkNode.Port(outputAttribute.PortName, outputAttribute.PortType));
-                }
+            foreach (NodePort outputPort in Node.OutputPorts)
+            {
+                AddOutputPort(outputPort.Name, outputPort.Type);
             }
         }
 
         private void InitializeNode()
         {
             // Initialize view
-            Node.Initialize(this);
-            Node.OnViewEnable();
+            NodeEditor.SetupDraw(this);
+            NodeEditor.OnViewEnable();
 
             UpdateNodeView();
         }
@@ -264,11 +226,9 @@ namespace Gork.Editor
             inputContainer.Clear();
             outputContainer.Clear();
             extensionContainer.Clear();
-
-            Node.InputPorts.Clear();
-            Node.OutputPorts.Clear();
         }
 
+        /*
         private void ChangeAttribute(int attributeID, bool rebuildNode = true)
         {
             if (_attributeList == null)
@@ -324,6 +284,7 @@ namespace Gork.Editor
 
             InitializeNode();
         }
+        */
 
         protected override void ToggleCollapse()
         {
@@ -335,11 +296,11 @@ namespace Gork.Editor
 
             if (expanded)
             {
-                Node.OnExpand();
+                NodeEditor.OnExpand();
             }
             else
             {
-                Node.OnCollapse();
+                NodeEditor.OnCollapse();
             }
 
             RefreshExpandedState();
@@ -545,10 +506,13 @@ namespace Gork.Editor
             style.top = pos.y;
         }
 
-        private void UpdateNodeView()
+        public void UpdateTitle()
         {
-            title = Node.Title;
+            title = NodeEditor.Title;
+        }
 
+        public void UpdateNodeView()
+        {
             int connectionCount = Node.OutputConnections.Count;
 
             int oldInputPortAmount = InputPorts.Count;
@@ -557,7 +521,7 @@ namespace Gork.Editor
             int newInputPortAmount = Node.InputPorts.Count;
             int newOutputPortAmount = Node.OutputPorts.Count;
 
-            void FillPorts(bool isInput, int newPortAmount, int oldPortAmount, List<GorkNode.Port> portInfos)
+            void FillPorts(bool isInput, int newPortAmount, int oldPortAmount, NodePortCollection portInfos)
             {
                 List<GorkPort> list = isInput ? InputPorts : OutputPorts;
 
@@ -620,8 +584,19 @@ namespace Gork.Editor
                             continue;
                         }
 
+                        List<Edge> edgeList = new List<Edge>();
+                        int edgeAmount = 0;
+
                         foreach (Edge edge in port.connections)
                         {
+                            edgeList.Add(edge);
+                            edgeAmount++;
+                        }
+
+                        for (int index = 0; index < edgeAmount; index++)
+                        {
+                            Edge edge = edgeList[index];
+
                             GorkPort inputPort = edge.input as GorkPort;
                             GorkPort outputPort = edge.output as GorkPort;
 
@@ -630,8 +605,6 @@ namespace Gork.Editor
 
                             GraphView.RemoveElement(edge);
                         }
-
-                        Node.RemoveOutputConnections(i);
 
                         container.Remove(port);
                     }
@@ -645,7 +618,7 @@ namespace Gork.Editor
                     GorkPort port = list[i];
 
                     // Default the type to the signal type if it's null
-                    port.portType = portInfo.Type == null ? GorkGraph.SignalType : portInfo.Type;
+                    port.portType = portInfo.Type == null ? GorkUtility.SignalType : portInfo.Type;
                     port.portName = portInfo.Name;
 
                     port.UpdateColor();
@@ -691,6 +664,7 @@ namespace Gork.Editor
             */
         }
 
+        /*
         public void AddAttributeContextMenu(DropdownMenu menu)
         {
             if (_attributeList == null || _attributeCount <= 1)
@@ -713,6 +687,7 @@ namespace Gork.Editor
                 }, i == _attributeID ? DropdownMenuAction.Status.Checked : DropdownMenuAction.Status.Normal);
             }
         }
+        */
 
         public void DisconnectInputPorts()
         {
@@ -748,7 +723,13 @@ namespace Gork.Editor
                 }
 
                 GraphView.RemoveElement(element);
+                OnDeletion();
             }
+        }
+
+        public void OnDeletion()
+        {
+            NodeEditor.Unsubscribe();
         }
 
         /// <summary>
@@ -895,7 +876,7 @@ namespace Gork.Editor
             GUID = Node.GUID,
             Position = Node.Position,
             NodeType = _nodeType.AssemblyQualifiedName,
-            AttributeID = _attributeID,
+            //AttributeID = _attributeID,
             FieldData = GetFieldData(),
         };
 
@@ -913,7 +894,7 @@ namespace Gork.Editor
                 field.SetValue(Node, data.GetValue(field.FieldType));
             }
 
-            Node.OnViewEnable();
+            NodeEditor.OnViewEnable();
             UpdateNodeView();
         }
 
@@ -923,7 +904,7 @@ namespace Gork.Editor
             public string GUID;
             public Vector2 Position;
             public string NodeType;
-            public int AttributeID;
+            //public int AttributeID;
             public List<FieldData> FieldData;
         }
 

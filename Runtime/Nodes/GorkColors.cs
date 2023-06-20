@@ -1,7 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-
 namespace Gork
 {
     /// <summary>
@@ -17,7 +13,7 @@ namespace Gork
         public const string DIALOGUE_COLOR = "422626";
         public const string ENTRY_COLOR = "443629";
         public const string WORMHOLE_COLOR = "30421d";
-        public const string TOOL_COlOR = "666666";
+        public const string TOOL_COLOR = "666666";
         public const string COROUTINE_COLOR = "57664D";
 
         public const string INTERNAL_EVENT_COLOR = "002806";

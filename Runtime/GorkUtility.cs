@@ -109,7 +109,8 @@ namespace Gork
         #endregion
 
         #region Extension Methods
-        public static Type SignalType =>  GorkGraph.SignalType;
+        public static Type SignalType =>  typeof(SignalClass);
+        private class SignalClass { }
 
         /// <summary>
         /// Returns if this <see cref="Type"/> is a Gork Signal or not.

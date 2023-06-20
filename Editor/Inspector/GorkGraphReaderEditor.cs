@@ -104,6 +104,8 @@ namespace Gork.Editor
                 // Create an empty generic menu which will be our dropdown menu
                 GenericMenu menu = new GenericMenu();
 
+                // TODO FIX event nodes
+                /*
                 // Loop through all events in the graph
                 foreach (GorkGraph.Event evt in (_graphProp.objectReferenceValue as GorkGraph).Events)
                 {
@@ -130,6 +132,7 @@ namespace Gork.Editor
                         serializedObject.ApplyModifiedProperties();
                     });
                 }
+                */
 
                 // Display the menu as a dropdown menu at the correct position
                 Rect dropdownRect = namePropRect;

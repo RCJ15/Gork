@@ -160,7 +160,9 @@ namespace Gork.Editor
             VisualElement root = rootVisualElement;
 
             root.RegisterCallback<DragEnterEvent>(DragAndDropEnter);
-            root.RegisterCallback<DragExitedEvent>(DragAndDropExited);
+            root.RegisterCallback<DragLeaveEvent>(DragAndDropLeave);
+            root.RegisterCallback<DragExitedEvent>(DragAndDropExit);
+            root.RegisterCallback<DragUpdatedEvent>(DragAndDropUpdated);
 
             // Import UXML
             if (_gorkGraphViewVisualTree == null)
@@ -403,21 +405,34 @@ namespace Gork.Editor
 
         private void OnDisable()
         {
-            Undo.undoRedoPerformed -= _inspectorView.OnUndoRedo;
-            Undo.undoRedoPerformed -= _graphView.OnUndoRedo;
+            // Unsubcribe from everything, with null checks for no errors!
 
-            UpdateAllSplitWidth -= _splitView.SetSize;
+            if (_inspectorView != null)
+            {
+                Undo.undoRedoPerformed -= _inspectorView.OnUndoRedo;
+            }
+
+            if (_graphView != null)
+            {
+                Undo.undoRedoPerformed -= _graphView.OnUndoRedo;
+
+                UpdateAllMinimaps -= _graphView.UpdateMinimap;
+
+                // Also save position
+                scrollPosition = _graphView.ScrollPosition;
+                zoomScale = _graphView.ZoomScale;
+            }
+
+            if (_splitView != null)
+            {
+                UpdateAllSplitWidth -= _splitView.SetSize;
+
+                splitViewMinimized = _splitView.IsMinimized;
+                splitViewMaximized = _splitView.IsMaximized;
+            }
+
             UpdateAllSplitWidth -= UpdateMinimapsOnChangeSplitWidth;
-
-            // Unsubscribe the update minimap event
-            UpdateAllMinimaps -= _graphView.UpdateMinimap;
             UpdateAllMinimaps -= UpdateMinimapButtonState;
-            
-            scrollPosition = _graphView.ScrollPosition;
-            zoomScale = _graphView.ZoomScale;
-            
-            splitViewMinimized = _splitView.IsMinimized;
-            splitViewMaximized = _splitView.IsMaximized;
         }
 
         private void UpdateMinimapsOnChangeSplitWidth(float width)
@@ -425,20 +440,27 @@ namespace Gork.Editor
             UpdateAllMinimaps?.Invoke();
         }
 
+        #region TODO: Drag and Drop Support
         private void DragAndDropEnter(DragEnterEvent evt)
         {
 
         }
 
-        private void DragAndDropExited(DragExitedEvent evt)
-        {
-            
-        }
-
-        private void DragAndDropPerform(DragPerformEvent evt)
+        private void DragAndDropLeave(DragLeaveEvent evt)
         {
 
         }
+
+        private void DragAndDropExit(DragExitedEvent evt)
+        {
+
+        }
+
+        private void DragAndDropUpdated(DragUpdatedEvent evt)
+        {
+
+        }
+        #endregion
 
         private void UpdateMinimapButtonState()
         {

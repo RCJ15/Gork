@@ -1,6 +1,4 @@
 using System;
-using System.Linq;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
@@ -29,16 +27,17 @@ namespace Gork.Editor
             }
 
             // Create a new search tree because our current one is nonexistent
-            _searchTree = new List<SearchTreeEntry>();
-
-            // Add the top title to the search tree
-            _searchTree.Add(new SearchTreeGroupEntry(new GUIContent("Create Node"), 0));
+            _searchTree = new List<SearchTreeEntry>
+            {
+                // Add the top title to the search tree
+                new SearchTreeGroupEntry(new GUIContent("Create Node"), 0)
+            };
 
             // Create a list of our sorted list items which we will populate with our attributes
-            List<GorkNodeInfoAttribute> sortedAttributesList = new List<GorkNodeInfoAttribute>();
+            List<GorkMenuItemAttribute> sortedAttributesList = new List<GorkMenuItemAttribute>();
 
             // Loop through all GorkNodeInfo attributes
-            foreach (GorkNodeInfoAttribute attribute in GorkNodeInfoAttribute.Attributes)
+            foreach (GorkMenuItemAttribute attribute in GorkMenuItemAttribute.Attributes)
             {
                 // Add attribute to the list
                 sortedAttributesList.Add(attribute);
@@ -47,8 +46,8 @@ namespace Gork.Editor
             // Sort the attributes based on their display names
             sortedAttributesList.Sort((a, b) =>
             {
-                string[] splits1 = a.DisplayName.Split('/');
-                string[] splits2 = b.DisplayName.Split('/');
+                string[] splits1 = a.MenuPath.Split('/');
+                string[] splits2 = b.MenuPath.Split('/');
 
                 int split1Length = splits1.Length;
                 int split2Length = splits2.Length;
@@ -90,9 +89,9 @@ namespace Gork.Editor
 
             List<string> groups = new List<string>();
 
-            foreach (GorkNodeInfoAttribute attribute in sortedAttributesList)
+            foreach (GorkMenuItemAttribute attribute in sortedAttributesList)
             {
-                string[] entryTitle = attribute.DisplayName.Split('/');
+                string[] entryTitle = attribute.MenuPath.Split('/');
                 string groupName = "";
                 int length = entryTitle.Length;
 
@@ -109,10 +108,9 @@ namespace Gork.Editor
                     groupName += "/";
                 }
 
-                Type nodeType = GorkNodeInfoAttribute.AttributeTypes[attribute];
-                int attributeID = GorkNodeInfoAttribute.TypeAttributes[nodeType].IndexOf(attribute);
+                Type nodeType = GorkMenuItemAttribute.AttributeTypes[attribute];
 
-                GUIContent content = new GUIContent(attribute.NodeName, attribute.WikiSummary);
+                GUIContent content = new GUIContent(attribute.DisplayName, attribute.WikiSummary);
 
                 Color? nullableColor = attribute.GetColor();
 
@@ -138,10 +136,10 @@ namespace Gork.Editor
                 entry.level = entryTitle.Length;
                 entry.userData = new Action<Vector2>(pos =>
                 {
-                    string displayName = attribute.NodeName;
+                    string displayName = attribute.DisplayName;
                     Undo.RecordObject(GraphView.Graph, $"Created {displayName}");
 
-                    GorkNodeView nodeView = GraphView.CreateNode(nodeType, pos, attributeID);
+                    GorkNodeView nodeView = GraphView.CreateNode(nodeType, pos);
 
                     if (EdgePort != null)
                     {

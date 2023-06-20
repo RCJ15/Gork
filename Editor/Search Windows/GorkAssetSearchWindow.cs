@@ -1,6 +1,4 @@
 using System;
-using System.Linq;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
@@ -34,10 +32,11 @@ namespace Gork.Editor
         public List<SearchTreeEntry> CreateSearchTree(SearchWindowContext context)
         {
             // Create a new search tree because our current one is nonexistent
-            List<SearchTreeEntry> searchTree = new List<SearchTreeEntry>();
-
-            // Add the top title to the search tree
-            searchTree.Add(new SearchTreeGroupEntry(new GUIContent("Choose Graph"), 0));
+            List<SearchTreeEntry> searchTree = new List<SearchTreeEntry>
+            {
+                // Add the top title to the search tree
+                new SearchTreeGroupEntry(new GUIContent("Choose Graph"), 0)
+            };
 
             // Create a list of all our Gork Graphs
             string[] guids = AssetDatabase.FindAssets($"t: {nameof(GorkGraph)}");

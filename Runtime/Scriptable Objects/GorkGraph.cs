@@ -19,8 +19,6 @@ namespace Gork
         , ISerializationCallbackReceiver
 #endif
     {
-        public static readonly Type SignalType = typeof(SignalClass);
-        private class SignalClass { }
 
         [SerializeField] private List<GorkNode> nodes = new List<GorkNode>();
         public List<GorkNode> Nodes => nodes;
@@ -216,53 +214,7 @@ namespace Gork
 #endif
         }
 
-        public void AddConnection(GorkNode parent, int parentPort, GorkNode child, int childPort)
-        {
-            // Get the list
-            List<GorkNode.Connection> parentList = parent.GetOutputConnections(parentPort);
-            List<GorkNode.Connection> childList = child.GetInputConnections(childPort);
-
-#if UNITY_EDITOR
-            Undo.RecordObject(child, $"Added connection to \"{child.name}\"");
-            Undo.RecordObject(parent, $"Added connection to \"{parent.name}\"");
-#endif
-            // Create 2 new GorkNode.Connection variables which will represent the new connections
-            GorkNode.Connection parentConnection = new GorkNode.Connection(childPort, child);
-            GorkNode.Connection childConnection = new GorkNode.Connection(parentPort, parent);
-
-            // Add the connection to the list
-            parentList.Add(parentConnection);
-            childList.Add(childConnection);
-
-            // Notify the nodes about the new connections
-            parent.OnOutputConnectionAdded(parentPort, parentConnection);
-            child.OnInputConnectionAdded(childPort, childConnection);
-        }
-
-        public void RemoveConnection(GorkNode parent, int parentPort, GorkNode child, int childPort)
-        {
-            // Get the list
-            List<GorkNode.Connection> parentList = parent.GetOutputConnections(parentPort);
-            List<GorkNode.Connection> childList = child.GetInputConnections(childPort);
-
-#if UNITY_EDITOR
-            Undo.RecordObject(child, $"Removed connection from \"{child.name}\"");
-            Undo.RecordObject(parent, $"Removed connection from \"{parent.name}\"");
-#endif
-            // Create 2 new GorkNode.Connection variables which will be used to remove the connections
-            GorkNode.Connection parentConnection = new GorkNode.Connection(childPort, child);
-            GorkNode.Connection childConnection = new GorkNode.Connection(parentPort, parent);
-
-            // Remove the connections from the lists
-            parentList.Remove(new GorkNode.Connection(childPort, child));
-            childList.Remove(new GorkNode.Connection(parentPort, parent));
-
-            // Notify the nodes about the removal of the connections
-            parent.OnOutputConnectionRemoved(parentPort, parentConnection);
-            child.OnInputConnectionRemoved(childPort, childConnection);
-        }
-
-#region Parameters
+        #region Parameters
         [SerializeField] private List<Parameter> _parameters = new List<Parameter>();
         public List<Parameter> Parameters => _parameters;
 
@@ -616,34 +568,29 @@ namespace Gork
 
             return (List<T>)_nodeTagTypeCache[tag][type];
         }
-#endregion
+        #endregion
 
-#region Events
+        #region Events
         public delegate void OnTriggerExternalEvent(string eventName, object parameter);
         public OnTriggerExternalEvent OnTriggerExternal;
 
-        private Dictionary<string, List<EventNode>> _internalEventNodesCache = null;
+        private Dictionary<string, List<InternalEventNode>> _internalEventNodesCache = null;
 
-        private Dictionary<string, List<EventNode>> InternalEventNodesCache
+        private Dictionary<string, List<InternalEventNode>> InternalEventNodesCache
         {
             get
             {
                 if (_internalEventNodesCache == null)
                 {
-                    _internalEventNodesCache = new Dictionary<string, List<EventNode>>();
+                    _internalEventNodesCache = new Dictionary<string, List<InternalEventNode>>();
 
-                    foreach (EventNode node in GetNodesOfType<EventNode>())
+                    foreach (InternalEventNode node in GetNodesOfType<InternalEventNode>())
                     {
-                        if (!node.IsInternal)
-                        {
-                            continue;
-                        }
-
                         string eventName = node.EventName;
 
                         if (!_internalEventNodesCache.ContainsKey(eventName))
                         {
-                            _internalEventNodesCache[eventName] = new List<EventNode>();
+                            _internalEventNodesCache[eventName] = new List<InternalEventNode>();
                         }
 
                         _internalEventNodesCache[eventName].Add(node);
@@ -659,12 +606,12 @@ namespace Gork
         /// </summary>
         public void TriggerInternalEvent(string eventName)
         {
-            if (!InternalEventNodesCache.TryGetValue(eventName, out List<EventNode> list))
+            if (!InternalEventNodesCache.TryGetValue(eventName, out List<InternalEventNode> list))
             {
                 return;
             }
 
-            foreach (EventNode node in list)
+            foreach (InternalEventNode node in list)
             {
                 OnNodeCalled.Invoke(node, 0);
             }
@@ -672,7 +619,7 @@ namespace Gork
 
         [SerializeField] private List<Event> _events = new List<Event>();
         public List<Event> Events => _events;
-
+        
         [Serializable]
         public class Event
         {

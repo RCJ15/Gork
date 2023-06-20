@@ -1,6 +1,4 @@
 using System;
-using System.Linq;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
@@ -38,7 +36,7 @@ namespace Gork.Editor
                 {
                     _nodeWikiPagesCache = new List<WikiPageContainer>();
 
-                    foreach (GorkNodeInfoAttribute attribute in GorkNodeInfoAttribute.Attributes)
+                    foreach (GorkMenuItemAttribute attribute in GorkMenuItemAttribute.Attributes)
                     {
                         // Ignore attributes that will not have a wiki page
                         if (!attribute.HasWiki)
@@ -58,10 +56,11 @@ namespace Gork.Editor
         public List<SearchTreeEntry> CreateSearchTree(SearchWindowContext context)
         {
             // Create a new search tree because our current one is nonexistent
-            List<SearchTreeEntry> searchTree = new List<SearchTreeEntry>();
-
-            // Add the top title to the search tree
-            searchTree.Add(new SearchTreeGroupEntry(new GUIContent("Choose Wiki Page"), 0));
+            List<SearchTreeEntry> searchTree = new List<SearchTreeEntry>
+            {
+                // Add the top title to the search tree
+                new SearchTreeGroupEntry(new GUIContent("Choose Wiki Page"), 0)
+            };
 
             // Create a list of all GWP files
             string[] guids = AssetDatabase.FindAssets($"t: {nameof(DefaultAsset)}");
@@ -204,9 +203,9 @@ namespace Gork.Editor
                 {
                     GorkWikiWindow.OpenGWPFile((string)pageContainer.Value);
                 }
-                else if (pageContainer.Type == typeof(GorkNodeInfoAttribute))
+                else if (pageContainer.Type == typeof(GorkMenuItemAttribute))
                 {
-                    GorkWikiWindow.OpenNodePage((GorkNodeInfoAttribute)pageContainer.Value);
+                    GorkWikiWindow.OpenNodePage((GorkMenuItemAttribute)pageContainer.Value);
                 }
 
                 return true;

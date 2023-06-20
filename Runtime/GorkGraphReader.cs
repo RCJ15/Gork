@@ -284,7 +284,7 @@ namespace Gork
 
         protected virtual IEnumerator NodeCoroutine(GorkNode node, int port)
         {
-            yield return node.NodeIEnumerator(port);
+            yield return node.ProcessIEnumerator(port);
 
             activeCoroutines.Remove(node);
 

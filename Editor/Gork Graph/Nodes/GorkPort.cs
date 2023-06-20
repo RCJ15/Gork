@@ -1,9 +1,6 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
-using UnityEditor;
 using UnityEditor.Experimental.GraphView;
 
 namespace Gork.Editor
@@ -13,33 +10,15 @@ namespace Gork.Editor
     /// </summary>
     public class GorkPort : Port
     {
-        public GorkNode Node;
-        public GorkNodeView NodeView;
-
-        public GorkGraphView GraphView;
+        public GorkNode Node { get; private set; }
+        public GorkNodeView NodeView { get; private set; }
+        public GorkNodeEditor NodeEditor { get; private set; }
+        public GorkGraphView GraphView { get; private set; }
 
         private Vector3 _cachedMousePos;
         public Vector3 MousePos => _cachedMousePos;
 
-        /*
-        public int PortIndex
-        {
-            get
-            {
-                // Is input
-                if (direction == Direction.Input)
-                {
-                    return NodeView.GetInputPortIndex(this);
-                }
-                // Is output
-                else
-                {
-                    return NodeView.GetOutputPortIndex(this);
-                }
-            }
-        }
-        */
-        public int PortIndex;
+        public int PortIndex { get; set; }
 
         private static readonly Color _intColor = new Color(0.580392f, 0.5058823f, 0.90196078431f, 1);
         private static readonly Color _floatColor = new Color(0.517647058f, 0.894117647f, 0.905882352f, 1);
@@ -53,6 +32,7 @@ namespace Gork.Editor
         {
             NodeView = nodeView;
             Node = NodeView.Node;
+            NodeEditor = NodeView.NodeEditor;
             GraphView = NodeView.GraphView;
 
             RegisterCallback<MouseMoveEvent>(OnMouseMoveEvent);
@@ -72,11 +52,16 @@ namespace Gork.Editor
                 return;
             }
 
+            if (portType == null)
+            {
+                portType = GorkUtility.SignalType;
+            }
+
             _oldPortType = portType;
 
             // Hardcoded colors (disgusting code)
             // I know that GraphView automatically sets colors for Int, Float and String
-            // but doing this will fix if any port decides to update their color after start
+            // but doing this will fix if any port decides to update their color after the initial start of the program
             if (portType == typeof(int))
             {
                 portColor = _intColor;
@@ -139,7 +124,7 @@ namespace Gork.Editor
         public static GorkPort CreateGorkPort(Orientation orientation, Direction direction, Type type, GorkNodeView nodeView)
         {
             GorkPort port = new GorkPort(orientation, direction, Capacity.Multi, type, nodeView);
-            
+
             port.m_EdgeConnector = new EdgeConnector<GorkEdge>(new GorkEdgeConnector(nodeView, port));
 
             port.AddManipulator(port.m_EdgeConnector);

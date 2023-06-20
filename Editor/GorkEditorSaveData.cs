@@ -208,7 +208,6 @@ namespace Gork.Editor
         #region Currently Open Wiki Page
         private const string _wikiGWPFileGUIDPrefKey = "GorkGraph.Wiki.GWPFileGuid";
         private const string _wikiNodePageTypePrefKey = "GorkGraph.Wiki.NodePageType";
-        private const string _wikiNodePageIndexPrefKey = "GorkGraph.Wiki.NodePageIndex";
 
         /// <summary>
         /// The currently open <see cref="GorkWikiPage"/>.
@@ -237,8 +236,8 @@ namespace Gork.Editor
 
                     case WikiType.NodePage:
                         Type type = Type.GetType(EditorPrefs.GetString(_wikiNodePageTypePrefKey));
-                        int index = EditorPrefs.GetInt(_wikiNodePageIndexPrefKey);
-                        return GorkWikiPage.ReadNodeAttribute(GorkNodeInfoAttribute.TypeAttributes[type][index]);
+
+                        return GorkWikiPage.ReadNodeAttribute(GorkMenuItemAttribute.TypeAttributes[type]);
 
                     default:
                         return null;
@@ -281,13 +280,13 @@ namespace Gork.Editor
             CurrentlyOpenType = WikiType.GWPFile;
             EditorPrefs.SetString(_wikiGWPFileGUIDPrefKey, AssetDatabase.AssetPathToGUID(gwpFilePath));
         }
-        public static void WikiOpenNodePage(GorkNodeInfoAttribute attribute)
+        public static void WikiOpenNodePage(GorkMenuItemAttribute attribute)
         {
             CurrentlyOpenType = WikiType.NodePage;
 
-            Type type = GorkNodeInfoAttribute.AttributeTypes[attribute];
+            Type type = GorkMenuItemAttribute.AttributeTypes[attribute];
             EditorPrefs.SetString(_wikiNodePageTypePrefKey, type.AssemblyQualifiedName);
-            EditorPrefs.SetInt(_wikiNodePageIndexPrefKey, GorkNodeInfoAttribute.TypeAttributes[type].IndexOf(attribute));
+            //EditorPrefs.SetInt(_wikiNodePageIndexPrefKey, GorkMenuItemAttribute.TypeAttributes[type].IndexOf(attribute));
         }
 
         private enum WikiType
