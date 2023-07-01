@@ -8,7 +8,7 @@ namespace Gork.Editor
     /// <summary>
     /// The base node editor for the all of the <see cref="ValueNode"/>.
     /// </summary>
-    [CustomGorkNodeEditor(typeof(ValueNode), Inherit = true)]
+    [CustomGorkNodeEditor(typeof(ValueNode<>), Inherit = true)]
     public class ValueNodeEditor : GorkNodeEditor
     {
         protected SerializedProperty valueProp;

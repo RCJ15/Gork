@@ -5,14 +5,8 @@ namespace Gork
     /// </summary>
     [GorkMenuItem("Values/Int Value", GorkColors.INT_COLOR, Order = 1)]
     [GorkOutputPort("Value", typeof(int))]
-    public class IntValueNode : ValueNode
+    public class IntValueNode : ValueNode<int>
     {
-        [GorkWikiInfo("The int value of this node")]
-        public int Value;
 
-        public override int IntCall(int port)
-        {
-            return Value;
-        }
     }
 }

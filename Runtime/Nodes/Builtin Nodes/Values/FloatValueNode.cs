@@ -5,14 +5,8 @@ namespace Gork
     /// </summary>
     [GorkMenuItem("Values/Float Value", GorkColors.FLOAT_COLOR, Order = 0)]
     [GorkOutputPort("Value", typeof(float))]
-    public class FloatValueNode : ValueNode
+    public class FloatValueNode : ValueNode<float>
     {
-        [GorkWikiInfo("The float value of this node")]
-        public float Value;
 
-        public override float FloatCall(int port)
-        {
-            return Value;
-        }
     }
 }
